@@ -1,43 +1,115 @@
 import Charts
 import SwiftUI
 
+/// One plotted reading, and the unbroken run of readings it belongs to.
+///
+/// A rail with no reading for a sample is left out of the chart rather than drawn
+/// at zero. A single line through what is left would run straight across each
+/// hole as though it had been measured, so every run is a series of its own: the
+/// line stops at a missing reading and starts again at the next one.
+private nonisolated struct RunPoint<X: Plottable & Hashable>: Identifiable {
+    let x: X
+    let watts: Double
+    let run: Int
+    /// The only reading in its run. A line needs two points, so it is drawn as a dot.
+    var isAlone = false
+    var id: X { x }
+}
+
+private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [Sample],
+                                                                     x: (Sample) -> X,
+                                                                     watts: (Sample) -> Double?) -> [RunPoint<X>] {
+    var points: [RunPoint<X>] = []
+    var run = 0
+    var runStart = 0
+    func close() {
+        if points.count - runStart == 1 { points[runStart].isAlone = true }
+        runStart = points.count
+    }
+    for sample in samples {
+        guard let value = watts(sample), value.isFinite else {
+            if points.count > runStart {
+                close()
+                run += 1
+            }
+            continue
+        }
+        points.append(RunPoint(x: x(sample), watts: value, run: run))
+    }
+    close()
+    return points
+}
+
+/// The runs of one rail as broken lines. `name` is the series the legend and
+/// VoiceOver would give; later runs carry their number so they stay apart.
+@ChartContentBuilder
+private func runLines<X: Plottable & Hashable>(_ points: [RunPoint<X>],
+                                               axis: String,
+                                               name: String,
+                                               color: Color,
+                                               style: StrokeStyle) -> some ChartContent {
+    ForEach(points) { point in
+        if point.isAlone {
+            PointMark(x: .value(axis, point.x),
+                      y: .value("Watts", point.watts))
+                .symbolSize(style.lineWidth * style.lineWidth * 4)
+                .foregroundStyle(color)
+        } else {
+            LineMark(x: .value(axis, point.x),
+                     y: .value("Watts", point.watts),
+                     series: .value("Series", point.run == 0 ? name : "\(name) \(point.run + 1)"))
+                .foregroundStyle(color)
+                .lineStyle(style)
+                .interpolationMethod(.monotone)
+        }
+    }
+}
+
+/// The adapter's runs as filled areas under the line.
+@ChartContentBuilder
+private func runAreas<X: Plottable & Hashable>(_ points: [RunPoint<X>],
+                                               axis: String,
+                                               topOpacity: Double) -> some ChartContent {
+    ForEach(points) { point in
+        // Unstacked: these are stretches of one quantity, not parts of a whole.
+        AreaMark(x: .value(axis, point.x),
+                 y: .value("Watts", point.watts),
+                 series: .value("Run", point.run),
+                 stacking: .unstacked)
+            .foregroundStyle(LinearGradient(colors: [Color.mwAccent.opacity(topOpacity), Color.mwAccent.opacity(0.02)],
+                                            startPoint: .top,
+                                            endPoint: .bottom))
+            .interpolationMethod(.monotone)
+    }
+}
+
 /// Rolling three-minute view of adapter power against battery power. The area is
 /// what comes in; the line is what reaches the cell.
 struct LivePowerChart: View {
     let samples: [LiveSample]
     var height: CGFloat = 130
 
+    private var inputPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.inputWatts) }
+    private var batteryPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.batteryWatts) }
+
     private var ceiling: Double {
-        let peak = samples.flatMap { [$0.inputWatts, $0.batteryWatts] }.filter(\.isFinite).max() ?? 0
+        let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
+            .filter(\.isFinite).max() ?? 0
         return max(peak * 1.25, 5)
     }
 
     var body: some View {
-        Chart {
-            ForEach(samples) { sample in
-                AreaMark(x: .value("Time", sample.date),
-                         y: .value("Watts", sample.inputWatts))
-                    .foregroundStyle(LinearGradient(colors: [Color.mwAccent.opacity(0.45), Color.mwAccent.opacity(0.02)],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom))
-                    .interpolationMethod(.monotone)
-            }
-            ForEach(samples) { sample in
-                LineMark(x: .value("Time", sample.date),
-                         y: .value("Watts", sample.inputWatts),
-                         series: .value("Series", String(localized: "From charger")))
-                    .foregroundStyle(Color.mwAccent)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineJoin: .round))
-                    .interpolationMethod(.monotone)
-            }
-            ForEach(samples) { sample in
-                LineMark(x: .value("Time", sample.date),
-                         y: .value("Watts", sample.batteryWatts),
-                         series: .value("Series", String(localized: "Into battery")))
-                    .foregroundStyle(Color.mwBattery)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                    .interpolationMethod(.monotone)
-            }
+        let input = inputPoints
+        return Chart {
+            runAreas(input, axis: "Time", topOpacity: 0.45)
+            runLines(input, axis: "Time",
+                     name: String(localized: "From charger"),
+                     color: .mwAccent,
+                     style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+            runLines(batteryPoints, axis: "Time",
+                     name: String(localized: "Into battery"),
+                     color: .mwBattery,
+                     style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
         }
         .chartYScale(domain: 0...ceiling)
         .chartXAxis(.hidden)
@@ -62,36 +134,27 @@ struct SessionPowerChart: View {
     let samples: [ChargeSample]
     var height: CGFloat = 150
 
+    private var inputPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.inputWatts) }
+    private var batteryPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.batteryWatts) }
+
     private var ceiling: Double {
-        max((samples.map(\.inputWatts).filter(\.isFinite).max() ?? 0) * 1.2, 5)
+        let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
+            .filter(\.isFinite).max() ?? 0
+        return max(peak * 1.2, 5)
     }
 
     var body: some View {
-        Chart {
-            ForEach(samples) { sample in
-                AreaMark(x: .value("Elapsed", sample.offset),
-                         y: .value("Watts", sample.inputWatts))
-                    .foregroundStyle(LinearGradient(colors: [Color.mwAccent.opacity(0.4), Color.mwAccent.opacity(0.02)],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom))
-                    .interpolationMethod(.monotone)
-            }
-            ForEach(samples) { sample in
-                LineMark(x: .value("Elapsed", sample.offset),
-                         y: .value("Watts", sample.inputWatts),
-                         series: .value("Series", "From charger"))
-                    .foregroundStyle(Color.mwAccent)
-                    .lineStyle(StrokeStyle(lineWidth: 1.8))
-                    .interpolationMethod(.monotone)
-            }
-            ForEach(samples) { sample in
-                LineMark(x: .value("Elapsed", sample.offset),
-                         y: .value("Watts", sample.batteryWatts),
-                         series: .value("Series", "Into battery"))
-                    .foregroundStyle(Color.mwBattery)
-                    .lineStyle(StrokeStyle(lineWidth: 1.4, dash: [4, 3]))
-                    .interpolationMethod(.monotone)
-            }
+        let input = inputPoints
+        return Chart {
+            runAreas(input, axis: "Elapsed", topOpacity: 0.4)
+            runLines(input, axis: "Elapsed",
+                     name: "From charger",
+                     color: .mwAccent,
+                     style: StrokeStyle(lineWidth: 1.8))
+            runLines(batteryPoints, axis: "Elapsed",
+                     name: "Into battery",
+                     color: .mwBattery,
+                     style: StrokeStyle(lineWidth: 1.4, dash: [4, 3]))
             // Shade the stretches where iOS was thermally throttling, which is
             // where the curve usually falls off a cliff.
             ForEach(samples.filter(\.throttled)) { sample in

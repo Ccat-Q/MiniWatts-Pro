@@ -4,6 +4,8 @@ import SwiftUI
 import WidgetKit
 
 struct ChargeLiveActivity: Widget {
+    private static let islandInset: CGFloat = 8
+
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ChargeActivityAttributes.self) { context in
             ChargeActivityLockScreenView(context: context)
@@ -29,6 +31,10 @@ struct ChargeLiveActivity: Widget {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(palette.muted)
                         .lineLimit(1)
+                        // The island's corners cut into the outer few points of the
+                        // top and bottom rows: the last letter here, and the End
+                        // button below, were clipped.
+                        .padding(.trailing, Self.islandInset)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     PrimaryMetricView(state: state,
@@ -44,8 +50,10 @@ struct ChargeLiveActivity: Widget {
                                  tint: palette.tint(for: reading),
                                  track: palette.track,
                                  height: 5)
-                        ActivityFootnote(context: context, palette: palette)
+                        // The status is already in the top corner.
+                        ActivityFootnote(context: context, palette: palette, showsStatus: false)
                     }
+                    .padding(.horizontal, Self.islandInset)
                 }
             } compactLeading: {
                 Image(systemName: symbol(for: state.selectedMetric))
@@ -205,17 +213,22 @@ private struct CompactMetricValue: View {
 struct ActivityFootnote: View {
     let context: ActivityViewContext<ChargeActivityAttributes>
     let palette: WidgetPalette
+    var showsStatus = true
 
     var body: some View {
         HStack(spacing: 6) {
             if context.isStale {
                 Label("Paused — open MiniWatts to resume", systemImage: "pause.circle")
                     .foregroundStyle(palette.loss)
-            } else {
+            } else if showsStatus {
                 Text(context.state.reading.statusTitle)
             }
             Spacer(minLength: 6)
-            Text("Since \(Text(context.attributes.startedAt, style: .time))")
+            // Dropped while paused: the line is too narrow for both, and the pause
+            // message was the one being cut short.
+            if !context.isStale {
+                Text("Since \(Text(context.attributes.startedAt, style: .time))")
+            }
             // The one way to close the activity while MiniWatts is suspended or killed:
             // iOS wakes the app to perform the intent.
             Button(intent: EndChargeActivityIntent()) {

@@ -1,5 +1,16 @@
 import Foundation
 
+/// Confidence state for the system's charge-hold decision.
+///
+/// A missing battery-current sensor is evidence we do not have, rather than
+/// evidence that charging is being held. Keeping that distinction prevents the
+/// UI from presenting an inferred hold as a fact.
+nonisolated enum ChargeHoldState: String, Codable, Hashable, Sendable {
+    case held
+    case notHeld
+    case unknown
+}
+
 /// One advertised USB-PD / HVC power profile from the adapter's menu.
 nonisolated struct PDProfile: Identifiable, Hashable {
     let index: Int
@@ -78,6 +89,9 @@ nonisolated struct PowerSnapshot: @unchecked Sendable {
     let batteryWatts: Double?
 
     private let zoneHottest: [ThermalZone: HIDSensors.Reading]
+    /// Set by `PowerMonitor` after a short debounce. Standalone reads (widgets,
+    /// Shortcuts) leave this nil and use the sensor evidence directly.
+    private var holdStateOverride: ChargeHoldState?
 
     init(date: Date = .now,
          registry: [String: Any] = [:],
@@ -91,6 +105,7 @@ nonisolated struct PowerSnapshot: @unchecked Sendable {
         self.adapterDetails = adapterDetails
         self.sensors = sensors
         self.chargeStatus = chargeStatus
+        self.holdStateOverride = nil
 
         // Names repeat — an iPhone 17 reports four separate sensors all called
         // "gas gauge battery" — so first wins, which is what a linear `first(where:)`
@@ -218,15 +233,35 @@ nonisolated struct PowerSnapshot: @unchecked Sendable {
     /// e.g. "Charging On Hold". Privileged on iOS, so usually nil there.
     var chargeStatusText: String? { chargeStatus?["chargeStatus"] as? String }
 
-    /// powerd's verdict when we can get it; otherwise the shape a hold takes from
-    /// outside: plugged in, below full, not charging, and no current into the battery.
-    /// That is what Optimized Battery Charging and a charge limit look like.
-    var isChargingOnHold: Bool {
-        if let text = chargeStatusText { return text == "Charging On Hold" }
+    /// The direct evidence available in this snapshot, before the monitor's
+    /// hysteresis filter is applied.
+    var measuredHoldState: ChargeHoldState {
+        if let text = chargeStatusText {
+            let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return normalized == "charging on hold" || normalized == "on hold" ? .held : .notHeld
+        }
         guard externalConnected, !isCharging, !fullyCharged,
-              let level = percent, level >= 50, level < 100 else { return false }
-        if let current = batteryRailCurrent { return abs(current) < 0.3 }
-        return true
+              let level = percent, level >= 50, level < 100 else { return .notHeld }
+        // The merged current, not the HID rail alone. On a phone they are the same
+        // number. Where the registry answers instead — the simulator — the rail is
+        // absent, and asking only the rail called the hold unknown beside a cell
+        // current reading of 0.00 A on the same screen.
+        guard let current = batteryCurrent else { return .unknown }
+        return abs(current) < 0.3 ? .held : .notHeld
+    }
+
+    /// The debounced state in the main app, or the measured state for a
+    /// standalone snapshot.
+    var holdState: ChargeHoldState { holdStateOverride ?? measuredHoldState }
+
+    mutating func setHoldStateOverride(_ state: ChargeHoldState?) {
+        holdStateOverride = state
+    }
+
+    var isChargingOnHold: Bool { holdState == .held }
+
+    var holdIsUnknown: Bool {
+        holdState == .unknown
     }
 
     var holdIsInferred: Bool { chargeStatusText == nil && isChargingOnHold }
@@ -299,14 +334,16 @@ nonisolated struct PowerSnapshot: @unchecked Sendable {
     var batteryVoltage: Double? { registryVoltage ?? batteryRailVoltage }
     var batteryCurrent: Double? { registryCurrent ?? batteryRailCurrent }
 
-    /// Share of the adapter's power that actually reaches the cell. The remainder
-    /// leaves as heat in the cable, the charge IC and the coil.
-    var conversionEfficiency: Double? {
+    /// Share of measured adapter power that reaches the cell. The remainder also
+    /// includes the phone's own system load, so this is charge-path efficiency.
+    var chargePathEfficiency: Double? {
         guard let inputWatts, inputWatts > 0.5, let batteryWatts, batteryWatts > 0 else { return nil }
         return min(batteryWatts / inputWatts, 1) * 100
     }
 
-    var conversionLossWatts: Double? {
+    /// Adapter power not observed at the battery rail. It is not a pure heat
+    /// measurement: phone load and conversion loss are mixed together.
+    var unaccountedPowerWatts: Double? {
         guard let inputWatts, let batteryWatts, inputWatts > batteryWatts else { return nil }
         return inputWatts - batteryWatts
     }

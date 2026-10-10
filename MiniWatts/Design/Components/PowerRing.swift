@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The headline gauge: a 280° dial with two concentric arcs — the outer one is
 /// what the adapter is delivering, the inner one is what reaches the cell. The
-/// gap between them is the conversion loss, visible at a glance.
+/// gap between them is power not observed at the battery rail, visible at a glance.
 struct PowerRing: View {
     let inputWatts: Double?
     let batteryWatts: Double?

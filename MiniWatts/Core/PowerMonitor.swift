@@ -4,8 +4,8 @@ import Observation
 /// One point in the rolling live chart.
 nonisolated struct LiveSample: Identifiable, Hashable {
     let date: Date
-    let inputWatts: Double
-    let batteryWatts: Double
+    let inputWatts: Double?
+    let batteryWatts: Double?
     let hottestTemperature: Double?
     var id: Date { date }
 }
@@ -101,6 +101,11 @@ final class PowerMonitor {
     private static let liveActivityKey = "showsLiveActivityWhileCharging"
     private static let liveActivityMetricKey = "liveActivityMetric"
     private static let liveWindow = 180
+    private static let holdDebounceInterval: TimeInterval = 30
+    private static let maximumRateObservationGap: TimeInterval = 120
+    /// Longest step between two ticks that still counts as watching continuously.
+    /// The same ten seconds the energy integrator allows.
+    private static let rateContinuityInterval: TimeInterval = 10
 
     private let probeService = SensorProbe()
     private let batteryCenter = BatteryCenterBridge()
@@ -117,13 +122,25 @@ final class PowerMonitor {
     /// closed at this point rather than at `.now`, so a charge that ended while the
     /// app was suspended is not recorded as having run until the app came back.
     private var lastConnectedObservation: Date?
+    /// Last foreground observation used to accumulate thermal-pressure time. Long
+    /// gaps are excluded for the same reason the energy integrator excludes them:
+    /// the app cannot know what happened while it was suspended.
+    private var lastThermalObservationDate: Date?
     /// Set by `deleteAllSessions`. The load is asynchronous, so a delete that lands
     /// while it is still in flight would otherwise have the file's contents merged
     /// back in on top of it a moment later.
     private var discardedStoredSessions = false
     private var percentLog: [(date: Date, percent: Int)] = []
     private var lastChargingFlag: Bool?
+    private var lastRateObservationDate: Date?
+    private var stableHoldState: ChargeHoldState?
+    private var holdCandidate: ChargeHoldState?
+    private var holdCandidateSince: Date?
     private var sensorServiceCount: Int = 0
+    /// Why the session history came up empty, when the file was there and could not
+    /// be read. Kept apart from `diagnostics` because that list is rebuilt whenever
+    /// the sensor count changes — on the first plug event, an appended line was gone.
+    private var storeWarning: String?
 
     init() {
         let defaults = UserDefaults.standard
@@ -143,6 +160,10 @@ final class PowerMonitor {
     /// Reads the session file off the main thread and merges it in.
     private func loadStoredSessions() async {
         let stored = await store.loaded()
+        if let warning = await store.readWarning() {
+            storeWarning = warning
+            collectDiagnostics()
+        }
         guard !discardedStoredSessions else {
             isLoaded = true
             return
@@ -200,7 +221,7 @@ final class PowerMonitor {
         let result = await probeService.read(lastExternalConnected: lastExternalConnected,
                                              periodicRescan: tick % 15 == 0)
         guard !Task.isCancelled else { return }
-        let current = result.snapshot
+        let current = stabilizedHoldSnapshot(result.snapshot)
         // Only Raw data reads this. It used to be assigned under `#if DEBUG`, when that
         // screen was Debug-only; now that the page ships, the guard made its "powerd
         // power sources" panel report none in every release build — a false statement
@@ -245,8 +266,8 @@ final class PowerMonitor {
 
     private func appendLive(_ snapshot: PowerSnapshot) {
         let sample = LiveSample(date: snapshot.date,
-                                inputWatts: snapshot.inputWatts ?? 0,
-                                batteryWatts: snapshot.batteryWatts ?? 0,
+                                inputWatts: snapshot.inputWatts,
+                                batteryWatts: snapshot.batteryWatts,
                                 hottestTemperature: snapshot.hottestSensor?.value)
         live.append(sample)
         if live.count > Self.liveWindow {
@@ -283,6 +304,7 @@ final class PowerMonitor {
                                        adapterRatedWatts: snapshot.adapterRatedWatts,
                                        isWireless: snapshot.isWirelessInput)
         lastSampleWrite = .distantPast
+        lastThermalObservationDate = snapshot.date
     }
 
     private func recordSample(_ snapshot: PowerSnapshot) {
@@ -299,7 +321,13 @@ final class PowerMonitor {
         // is filled in whenever it first becomes available.
         if session.adapterName == nil { session.adapterName = snapshot.adapterName }
         if session.adapterRatedWatts == nil { session.adapterRatedWatts = snapshot.adapterRatedWatts }
-        if thermal.state.isThrottling { session.throttledSeconds += 1 }
+        if let previous = lastThermalObservationDate {
+            let interval = snapshot.date.timeIntervalSince(previous)
+            if interval > 0, interval <= 10, thermal.state.isThrottling {
+                session.throttledSeconds += interval
+            }
+        }
+        lastThermalObservationDate = snapshot.date
         // Carried on every tick rather than at close: the fit is what History uses to
         // compare one cable with another, and a session that ends while the app is
         // suspended is closed from `lastConnectedObservation` without another reading.
@@ -308,8 +336,8 @@ final class PowerMonitor {
         if snapshot.date.timeIntervalSince(lastSampleWrite) >= SessionStore.sampleInterval {
             lastSampleWrite = snapshot.date
             session.samples.append(ChargeSample(offset: snapshot.date.timeIntervalSince(session.start),
-                                                inputWatts: snapshot.inputWatts ?? 0,
-                                                batteryWatts: snapshot.batteryWatts ?? 0,
+                                                inputWatts: snapshot.inputWatts,
+                                                batteryWatts: snapshot.batteryWatts,
                                                 percent: snapshot.percent ?? session.endPercent,
                                                 batteryTemperature: snapshot.batteryTemperature,
                                                 hottestTemperature: snapshot.hottestSensor?.value,
@@ -335,6 +363,7 @@ final class PowerMonitor {
         currentSession = nil
         energy.reset()
         sessionTotals = EnergyTotals()
+        lastThermalObservationDate = nil
         if Self.isWorthKeeping(session) {
             sessions.insert(session, at: 0)
         }
@@ -391,7 +420,53 @@ final class PowerMonitor {
         currentSession = nil
         energy.reset()
         sessionTotals = EnergyTotals()
+        lastThermalObservationDate = nil
         store.deleteAll()
+    }
+
+    // MARK: Charge hold state
+
+    /// Apply a short hysteresis window to the inferred hold state. A single HID
+    /// sample can lose the battery-current rail while the phone is still charging;
+    /// requiring the opposite state to persist avoids flickering between “hold” and
+    /// “not charging”. Explicit unplug/charge/full transitions clear immediately.
+    ///
+    /// The first reading of a run is taken as it stands; only a change from it has
+    /// to persist. Making the first one settle as well put thirty seconds of “hold
+    /// status unknown” on every cold launch during a real hold — which, with an 80 %
+    /// charge limit, is most launches — and `.unknown` is reserved for a missing
+    /// current sensor, which that was not: the sensor was answering, with zero.
+    private func stabilizedHoldSnapshot(_ snapshot: PowerSnapshot) -> PowerSnapshot {
+        let observed = snapshot.measuredHoldState
+
+        if stableHoldState == nil {
+            stableHoldState = observed
+            holdCandidate = nil
+            holdCandidateSince = nil
+        } else if !snapshot.externalConnected || snapshot.isCharging || snapshot.fullyCharged {
+            stableHoldState = .notHeld
+            holdCandidate = nil
+            holdCandidateSince = nil
+        } else if observed == .unknown {
+            // Preserve the last known state while the current sensor is absent.
+            holdCandidate = nil
+            holdCandidateSince = nil
+        } else if observed == stableHoldState {
+            holdCandidate = nil
+            holdCandidateSince = nil
+        } else if holdCandidate != observed {
+            holdCandidate = observed
+            holdCandidateSince = snapshot.date
+        } else if let since = holdCandidateSince,
+                  snapshot.date.timeIntervalSince(since) >= Self.holdDebounceInterval {
+            stableHoldState = observed
+            holdCandidate = nil
+            holdCandidateSince = nil
+        }
+
+        var adjusted = snapshot
+        adjusted.setHoldStateOverride(stableHoldState ?? observed)
+        return adjusted
     }
 
     // MARK: Rate estimate
@@ -401,8 +476,34 @@ final class PowerMonitor {
     private func updateRateEstimate(_ snapshot: PowerSnapshot) {
         guard let percent = snapshot.percent else {
             rateEstimateWatts = nil
+            lastRateObservationDate = nil
             return
         }
+
+        // What a hole in the observations costs depends on what happened in it, so
+        // the log is not thrown away on every `pause()`: two transitions take
+        // minutes to arrive, and someone who only ever glances at the app would
+        // never see an estimate at all.
+        if let previousDate = lastRateObservationDate {
+            let gap = snapshot.date.timeIntervalSince(previousDate)
+            if gap > Self.maximumRateObservationGap || gap < 0 {
+                // The app was suspended or the source clock moved. A slope across
+                // that hole would look like a near-zero discharge rate.
+                percentLog.removeAll()
+                rateEstimateWatts = nil
+            } else if gap > Self.rateContinuityInterval, percentLog.last?.percent != percent {
+                // A short hole, and the level moved somewhere inside it. When is
+                // not known — only that it was before now — and stamping it now
+                // would shorten the next step and overstate the rate. Start again
+                // from this level: a log's first entry is never used as a time.
+                // The last estimate stays up; it is at most two minutes old.
+                percentLog.removeAll()
+            }
+            // A short hole the level sat still through has lost nothing: the log
+            // only holds the moments the level changed.
+        }
+        lastRateObservationDate = snapshot.date
+
         if lastChargingFlag != snapshot.isCharging {
             lastChargingFlag = snapshot.isCharging
             percentLog.removeAll()
@@ -464,6 +565,7 @@ final class PowerMonitor {
         #if targetEnvironment(simulator)
         lines.append("Simulator: IOKit reads the Mac's battery, HID sensors are absent.")
         #endif
+        if let storeWarning { lines.append(storeWarning) }
         diagnostics = lines
     }
 

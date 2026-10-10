@@ -4,8 +4,10 @@ import Foundation
 nonisolated struct ChargeSample: Codable, Hashable, Identifiable {
     /// Seconds since the session started.
     let offset: TimeInterval
-    let inputWatts: Double
-    let batteryWatts: Double
+    /// Nil means that rail was unavailable for that sample. Older session files
+    /// contain numeric values here and decode unchanged through Optional.
+    let inputWatts: Double?
+    let batteryWatts: Double?
     let percent: Int
     let batteryTemperature: Double?
     let hottestTemperature: Double?
@@ -119,6 +121,9 @@ nonisolated final class SessionStore: @unchecked Sendable {
     private let queue = DispatchQueue(label: "org.zhaohe.MiniWatts.sessions", qos: .utility)
     /// Guarded by `queue`. Holds at most the newest pending write.
     private var pending: [ChargeSession]?
+    /// Set on the queue when a history file exists but cannot be decoded. The
+    /// original is moved aside before a later save is allowed to replace it.
+    private var lastReadWarning: String?
 
     init(filename: String = "charge-sessions.json") {
         let directory = (try? FileManager.default.url(for: .applicationSupportDirectory,
@@ -131,14 +136,36 @@ nonisolated final class SessionStore: @unchecked Sendable {
 
     /// Reads the file. Call this off the main thread — `loaded()` does that for you.
     private func read() -> [ChargeSession] {
-        guard let data = try? Data(contentsOf: url),
-              let sessions = try? JSONDecoder().decode([ChargeSession].self, from: data) else { return [] }
-        return sessions.sorted { $0.start > $1.start }
+        lastReadWarning = nil
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        do {
+            let sessions = try JSONDecoder().decode([ChargeSession].self, from: data)
+            return sessions.sorted { $0.start > $1.start }
+        } catch {
+            let stamp = Int(Date.now.timeIntervalSince1970)
+            let backupURL = url.deletingPathExtension()
+                .appendingPathExtension("corrupt-\(stamp).json")
+            // Moved, not copied. A copy left the unreadable file where it was, so
+            // until a session was saved over it every launch set aside another
+            // one, several megabytes each at the size this file can reach. If the
+            // move fails the copy is still better than nothing.
+            if (try? FileManager.default.moveItem(at: url, to: backupURL)) == nil {
+                try? data.write(to: backupURL, options: .atomic)
+            }
+            lastReadWarning = "Session history could not be decoded; the original was kept as \(backupURL.lastPathComponent)."
+            return []
+        }
     }
 
     func loaded() async -> [ChargeSession] {
         await withCheckedContinuation { continuation in
             queue.async { continuation.resume(returning: self.read()) }
+        }
+    }
+
+    func readWarning() async -> String? {
+        await withCheckedContinuation { continuation in
+            queue.async { continuation.resume(returning: self.lastReadWarning) }
         }
     }
 

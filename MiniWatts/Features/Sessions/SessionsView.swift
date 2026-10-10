@@ -8,6 +8,24 @@ extension ChargeSession {
         if let adapterName { return Text(verbatim: adapterName) }
         return Text(fallbackTitle)
     }
+
+    /// Nil when the adapter side was never measured — every wireless charge, and
+    /// anything recorded where the input rail does not answer. The stored peak is
+    /// 0 then, and a row reading "0.00 W" beside a 60 W charge curve said the
+    /// charger delivered nothing.
+    var measuredPeakInputWatts: Double? {
+        totals.measuredInputWattHours != nil && peakInputWatts > 0 ? peakInputWatts : nil
+    }
+
+    /// The curve a list row draws: the adapter's when it was measured, otherwise
+    /// the battery's, in the colour of the energy figure beside it. Older files
+    /// wrote a missing input reading as 0, so "has input samples" cannot decide.
+    var sparkline: (values: [Double], tint: Color) {
+        if totals.measuredInputWattHours != nil {
+            return (samples.compactMap(\.inputWatts), .mwAccent)
+        }
+        return (samples.compactMap(\.batteryWatts), .mwBattery)
+    }
 }
 
 struct SessionsView: View {
@@ -77,19 +95,21 @@ struct SessionsView: View {
     }
 
     private var summaryPanel: some View {
-        let totalDelivered = monitor.sessions.reduce(0) { $0 + $1.totals.inputWattHours }
+        // Nil, not 0, when no session measured the adapter side.
+        let delivered = monitor.sessions.compactMap(\.totals.measuredInputWattHours)
+        let totalDelivered = delivered.isEmpty ? nil : delivered.reduce(0, +)
         let totalStored = monitor.sessions.reduce(0) { $0 + $1.totals.batteryWattHours }
-        let efficiencies = monitor.sessions.compactMap(\.totals.efficiencyPercent)
+        let efficiencies = monitor.sessions.compactMap(\.totals.chargePathEfficiencyPercent)
         let averageEfficiency = efficiencies.isEmpty ? nil : efficiencies.reduce(0, +) / Double(efficiencies.count)
         return Panel("All sessions", systemImage: "sum", trailing: Text(verbatim: "\(monitor.sessions.count)")) {
             HStack(alignment: .top, spacing: 10) {
                 Metric(caption: "Delivered",
-                       value: String(format: "%.1f", totalDelivered),
+                       value: totalDelivered.map { String(format: "%.1f", $0) } ?? "—",
                        unit: "Wh", tint: .mwAccent, size: 21)
                 Metric(caption: "Stored",
                        value: String(format: "%.1f", totalStored),
                        unit: "Wh", tint: .mwBattery, size: 21)
-                Metric(caption: "Round trip",
+                Metric(caption: "Cell share",
                        value: averageEfficiency.map { String(format: "%.0f", $0) } ?? "—",
                        unit: "%", tint: .mwLoss, size: 21)
             }
@@ -125,9 +145,9 @@ struct SessionRow: View {
                     }
                 }
                 HStack(spacing: 10) {
-                    Sparkline(values: session.samples.map(\.inputWatts))
+                    Sparkline(values: session.sparkline.values, tint: session.sparkline.tint)
                         .frame(height: 26)
-                    if let efficiency = session.totals.efficiencyPercent {
+                    if let efficiency = session.totals.chargePathEfficiencyPercent {
                         Pill(text: Text(verbatim: String(format: "%.0f%%", efficiency)), systemImage: "arrow.triangle.swap", tint: .mwLoss)
                     }
                     if session.throttledFraction > 0.05 {
@@ -195,16 +215,16 @@ struct SessionDetailView: View {
                     Metric(caption: "Stored",
                            value: String(format: "%.2f", session.totals.batteryWattHours),
                            unit: "Wh", tint: .mwBattery, size: 21)
-                    Metric(caption: "Lost",
-                           value: String(format: "%.2f", session.totals.lossWattHours),
+                    Metric(caption: "Load + loss",
+                           value: session.totals.unaccountedWattHours.map { String(format: "%.2f", $0) } ?? "—",
                            unit: "Wh", tint: .mwLoss, size: 21)
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Metric(caption: "Into cell",
                            value: String(format: "%.0f", session.totals.batteryMilliAmpHours),
                            unit: "mAh", size: 21)
-                    Metric(caption: "Round trip",
-                           value: session.totals.efficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
+                    Metric(caption: "Cell share",
+                           value: session.totals.chargePathEfficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
                            unit: "%", tint: .mwLoss, size: 21)
                     Metric(caption: "Gained",
                            value: "+\(session.gainedPercent)",
@@ -222,7 +242,7 @@ struct SessionDetailView: View {
 
     private var powerPanel: some View {
         Panel("Charge curve", systemImage: "chart.xyaxis.line",
-              trailing: Text("peak \(String(format: "%.1f", session.peakInputWatts)) W")) {
+              trailing: Text("peak \(String(format: "%.1f", session.measuredPeakInputWatts ?? session.peakBatteryWatts)) W")) {
             if session.samples.isEmpty {
                 EmptyNote(text: "This session ended before the first sample was written.")
             } else {
@@ -322,7 +342,7 @@ struct SessionDetailView: View {
                 DetailRow(label: "Ended", value: session.end.map(Formatting.timestamp))
                 DetailRow(label: "Adapter", value: session.adapterName)
                 DetailRow(label: "Rated", value: session.adapterRatedWatts.map { String(format: "%.0f W", $0) })
-                DetailRow(label: "Peak from charger", value: String(format: "%.2f W", session.peakInputWatts))
+                DetailRow(label: "Peak from charger", value: session.measuredPeakInputWatts.map { String(format: "%.2f W", $0) })
                 DetailRow(label: "Peak into cell", value: String(format: "%.2f W", session.peakBatteryWatts))
                 DetailRow(label: "Peak cell temp", value: session.peakBatteryTemperature.map { String(format: "%.1f °C", $0) })
                 DetailRow(label: "Average in", value: session.totals.averageInputWatts.map { String(format: "%.2f W", $0) })

@@ -73,7 +73,7 @@ struct ThermalView: View {
                 }
                 severityMeter
                 if snapshot.externalConnected, monitor.thermal.state.isThrottling {
-                    Text("Charge power below the adapter's rating right now is expected: the limit is the system's, not the charger's.")
+                    Text("Charge power below the adapter's rating right now is expected: system thermal pressure may be limiting current.")
                         .font(.caption2)
                         .foregroundStyle(Color.mwDanger)
                         .fixedSize(horizontal: false, vertical: true)

@@ -574,6 +574,39 @@ snapshot assembly have moved to `SensorProbe`, an actor outside the main actor;
 after these changes, shipped in v1.4.1: no hitch. Not yet re-recorded with Time
 Profiler.
 
+## Missing readings, energy totals and hold state
+
+- **A missing reading is `nil` all the way down**, not 0: `LiveSample` and `ChargeSample`
+  carry optional watts, the charts break their lines at a hole (`runPoints` in
+  `Charts.swift`; a reading alone between two holes is a dot), and `EnergyAccumulator`
+  integrates a rail only over intervals where both ends were read. Files written before
+  v1.5.0 stored a missing input as 0, so "was the adapter side measured" is asked of the
+  totals (`measuredInputWattHours`), never of the samples.
+- **`EnergyTotals` keeps a paired total.** Efficiency ("Cell share") and the remainder
+  ("Load + loss") come from `pairedInputWattHours` / `pairedBatteryWattHours`, the energy
+  over intervals where *both* rails answered. Dividing the two full totals compares
+  stretches of different length whenever one rail drops out. `integratedSeconds` is every
+  watched interval, whichever rails answered — History sets it against the session's
+  length — and the per-rail coverage is in the `…MeasuredSeconds` fields.
+- **The remainder is not heat.** Input minus what reaches the cell is the phone's own load
+  plus conversion loss, so it is labelled "Load + loss", never "lost as heat".
+- **Hold state has three values.** `.unknown` means no battery-current reading at all, not
+  "not sure yet". `measuredHoldState` reads the merged `batteryCurrent` (HID rail, or the
+  registry where that answers instead — the simulator). `PowerMonitor` debounces *changes*
+  for 30 s; the first reading of a run is taken as it stands, or every cold launch during
+  a real hold — most launches, with an 80 % limit — showed "unknown" for half a minute.
+- **The rate estimate survives a short background.** `pause()` leaves the percent log
+  alone; a hole over 120 s clears it, a shorter one restarts it only if the level moved
+  inside the hole.
+- **An unreadable history file is moved aside**, to `charge-sessions.corrupt-<time>.json`,
+  and Raw data says so. Moved, not copied, or every launch sets aside another one.
+- A build older than v1.5.0 cannot read a v1.5.0 history file (optional samples), and
+  would overwrite it. Nothing to do about that from here; it only bites on a downgrade.
+
+Checked in the simulator only, where the Mac's battery stands in: the wired input side —
+"Load + loss", "Cell share", the input line on the charts — has not been seen on a device
+since these changes.
+
 ## Conventions
 
 - English source copy. Sensor names stay raw (`Charger VQ0u`), with a human label

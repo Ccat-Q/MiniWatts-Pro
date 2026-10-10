@@ -53,7 +53,10 @@ nonisolated final class HIDSensors {
         let name: String
         let usagePage: Int
         let usage: Int
-        var id: String { "\(name)#\(usagePage)#\(usage)" }
+        /// Names and usage pairs can repeat. Keep the discovery index in the
+        /// identity so DebugView does not collapse duplicate services into one row.
+        let index: Int
+        var id: String { "\(index)#\(name)#\(usagePage)#\(usage)" }
     }
 
     private typealias CreateFn = @convention(c) (CFAllocator?) -> Unmanaged<CFTypeRef>?
@@ -163,8 +166,11 @@ nonisolated final class HIDSensors {
         // nil, not an empty dictionary: an empty matching dictionary matches
         // nothing, which is why this used to come back empty and the button in the
         // debug view looked dead.
-        let all = discover(matching: nil, eventType: 0).map {
-            ServiceInfo(name: $0.name, usagePage: $0.usagePage, usage: $0.usage)
+        let all = discover(matching: nil, eventType: 0).enumerated().map { index, service in
+            ServiceInfo(name: service.name,
+                        usagePage: service.usagePage,
+                        usage: service.usage,
+                        index: index)
         }
         rescan() // the matching dictionary is client state; put it back
         return all.sorted { ($0.usagePage, $0.usage, $0.name) < ($1.usagePage, $1.usage, $1.name) }

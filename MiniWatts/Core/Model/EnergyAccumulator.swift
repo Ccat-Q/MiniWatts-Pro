@@ -16,6 +16,72 @@ nonisolated struct EnergyTotals: Codable, Hashable {
     /// Seconds of integration, which is not the same as wall-clock time: gaps
     /// longer than the sample window are dropped rather than extrapolated.
     var integratedSeconds: TimeInterval = 0
+    /// Seconds for which both ends of the input-power interval were measured.
+    /// This is separate from `integratedSeconds` because wireless charging can
+    /// expose the battery side while the adapter-side current is unavailable.
+    var inputMeasuredSeconds: TimeInterval = 0
+    /// Seconds for which both ends of the battery-power interval were measured.
+    var batteryMeasuredSeconds: TimeInterval = 0
+    /// Seconds for which both ends of the battery-current interval were measured.
+    var batteryCurrentMeasuredSeconds: TimeInterval = 0
+    /// The adapter's energy over the intervals in which the battery rail was
+    /// measured as well, and the battery's over those same intervals. A ratio of
+    /// the two full totals compares stretches of different length whenever one
+    /// rail drops out — up to a quarter too generous at the 80 % overlap that was
+    /// once allowed — so efficiency and the remainder are taken from this pair.
+    var pairedInputWattHours: Double = 0
+    var pairedBatteryWattHours: Double = 0
+
+    private enum CodingKeys: String, CodingKey {
+        case inputWattHours
+        case batteryWattHours
+        case batteryMilliAmpHours
+        case integratedSeconds
+        case inputMeasuredSeconds
+        case batteryMeasuredSeconds
+        case batteryCurrentMeasuredSeconds
+        case pairedInputWattHours
+        case pairedBatteryWattHours
+    }
+
+    init() {}
+
+    /// Older session files predate per-channel coverage. Decode them with the
+    /// old aggregate duration as a conservative compatibility fallback.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        inputWattHours = try values.decodeIfPresent(Double.self, forKey: .inputWattHours) ?? 0
+        batteryWattHours = try values.decodeIfPresent(Double.self, forKey: .batteryWattHours) ?? 0
+        batteryMilliAmpHours = try values.decodeIfPresent(Double.self, forKey: .batteryMilliAmpHours) ?? 0
+        integratedSeconds = try values.decodeIfPresent(TimeInterval.self, forKey: .integratedSeconds) ?? 0
+        inputMeasuredSeconds = try values.decodeIfPresent(TimeInterval.self, forKey: .inputMeasuredSeconds)
+            ?? (inputWattHours > 0.001 ? integratedSeconds : 0)
+        batteryMeasuredSeconds = try values.decodeIfPresent(TimeInterval.self, forKey: .batteryMeasuredSeconds)
+            ?? (batteryWattHours > 0 ? integratedSeconds : 0)
+        batteryCurrentMeasuredSeconds = try values.decodeIfPresent(TimeInterval.self,
+                                                                    forKey: .batteryCurrentMeasuredSeconds)
+            ?? (batteryMilliAmpHours > 0 ? integratedSeconds : 0)
+        // Before the pair existed both rails were integrated over every interval,
+        // a missing reading counting as zero, so the totals were the pair.
+        let hadBoth = inputWattHours > 0.001 && batteryWattHours > 0
+        pairedInputWattHours = try values.decodeIfPresent(Double.self, forKey: .pairedInputWattHours)
+            ?? (hadBoth ? inputWattHours : 0)
+        pairedBatteryWattHours = try values.decodeIfPresent(Double.self, forKey: .pairedBatteryWattHours)
+            ?? (hadBoth ? batteryWattHours : 0)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(inputWattHours, forKey: .inputWattHours)
+        try values.encode(batteryWattHours, forKey: .batteryWattHours)
+        try values.encode(batteryMilliAmpHours, forKey: .batteryMilliAmpHours)
+        try values.encode(integratedSeconds, forKey: .integratedSeconds)
+        try values.encode(inputMeasuredSeconds, forKey: .inputMeasuredSeconds)
+        try values.encode(batteryMeasuredSeconds, forKey: .batteryMeasuredSeconds)
+        try values.encode(batteryCurrentMeasuredSeconds, forKey: .batteryCurrentMeasuredSeconds)
+        try values.encode(pairedInputWattHours, forKey: .pairedInputWattHours)
+        try values.encode(pairedBatteryWattHours, forKey: .pairedBatteryWattHours)
+    }
 
     /// Delivered energy, or nil when none could be measured.
     ///
@@ -26,20 +92,26 @@ nonisolated struct EnergyTotals: Codable, Hashable {
         inputWattHours > 0.001 ? inputWattHours : nil
     }
 
-    /// Share of delivered energy that reached the cell, 0…100.
-    var efficiencyPercent: Double? {
-        guard inputWattHours > 0.001, batteryWattHours > 0 else { return nil }
-        return min(batteryWattHours / inputWattHours, 1) * 100
+    /// Share of measured adapter energy that reached the cell, 0…100.
+    /// This is charge-path efficiency, not a round-trip battery efficiency.
+    var chargePathEfficiencyPercent: Double? {
+        guard pairedInputWattHours > 0.001, pairedBatteryWattHours > 0 else { return nil }
+        return min(pairedBatteryWattHours / pairedInputWattHours, 1) * 100
     }
 
-    /// Energy that turned into heat in the cable, the charge IC and the coil.
-    var lossWattHours: Double {
-        max(inputWattHours - batteryWattHours, 0)
+    /// Adapter energy not observed at the battery rail. It includes phone load,
+    /// cable/coil loss and charge-IC conversion loss, so it must not be labelled
+    /// as pure heat. Nil when the two rails were never measured together. Taken
+    /// from the paired totals, so where one rail dropped out for part of a
+    /// session it is not quite Delivered minus Stored.
+    var unaccountedWattHours: Double? {
+        guard pairedInputWattHours > 0.001 else { return nil }
+        return max(pairedInputWattHours - pairedBatteryWattHours, 0)
     }
 
     var averageInputWatts: Double? {
-        guard integratedSeconds > 0 else { return nil }
-        return inputWattHours * 3600 / integratedSeconds
+        guard inputMeasuredSeconds > 0 else { return nil }
+        return inputWattHours * 3600 / inputMeasuredSeconds
     }
 }
 
@@ -53,9 +125,9 @@ nonisolated struct EnergyTotals: Codable, Hashable {
 nonisolated final class EnergyAccumulator {
     private struct Sample {
         let date: Date
-        let inputWatts: Double
-        let batteryWatts: Double
-        let batteryAmps: Double
+        let inputWatts: Double?
+        let batteryWatts: Double?
+        let batteryAmps: Double?
     }
 
     /// Longest gap that still counts as continuous measurement.
@@ -71,9 +143,9 @@ nonisolated final class EnergyAccumulator {
 
     func add(_ snapshot: PowerSnapshot) {
         let sample = Sample(date: snapshot.date,
-                            inputWatts: snapshot.inputWatts ?? 0,
-                            batteryWatts: max(snapshot.batteryWatts ?? 0, 0),
-                            batteryAmps: max(snapshot.batteryCurrent ?? 0, 0))
+                            inputWatts: snapshot.inputWatts,
+                            batteryWatts: snapshot.batteryWatts.map { max($0, 0) },
+                            batteryAmps: snapshot.batteryCurrent.map { max($0, 0) })
         defer { previous = sample }
         guard let previous else { return }
 
@@ -81,9 +153,26 @@ nonisolated final class EnergyAccumulator {
         guard interval > 0, interval <= Self.maximumInterval else { return }
 
         let hours = interval / 3600
-        totals.inputWattHours += (previous.inputWatts + sample.inputWatts) / 2 * hours
-        totals.batteryWattHours += (previous.batteryWatts + sample.batteryWatts) / 2 * hours
-        totals.batteryMilliAmpHours += (previous.batteryAmps + sample.batteryAmps) / 2 * hours * 1000
+        if let previousInput = previous.inputWatts, let input = sample.inputWatts {
+            totals.inputWattHours += (previousInput + input) / 2 * hours
+            totals.inputMeasuredSeconds += interval
+        }
+        if let previousBattery = previous.batteryWatts, let battery = sample.batteryWatts {
+            totals.batteryWattHours += (previousBattery + battery) / 2 * hours
+            totals.batteryMeasuredSeconds += interval
+        }
+        if let previousAmps = previous.batteryAmps, let amps = sample.batteryAmps {
+            totals.batteryMilliAmpHours += (previousAmps + amps) / 2 * hours * 1000
+            totals.batteryCurrentMeasuredSeconds += interval
+        }
+        if let previousInput = previous.inputWatts, let input = sample.inputWatts,
+           let previousBattery = previous.batteryWatts, let battery = sample.batteryWatts {
+            totals.pairedInputWattHours += (previousInput + input) / 2 * hours
+            totals.pairedBatteryWattHours += (previousBattery + battery) / 2 * hours
+        }
+        // Every watched interval, whichever rails answered in it. History sets
+        // this against the session's length to say how much of the charge the app
+        // was in front for; what each rail covered is in the fields above.
         totals.integratedSeconds += interval
     }
 }

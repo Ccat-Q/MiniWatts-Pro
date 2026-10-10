@@ -53,6 +53,9 @@ struct DashboardView: View {
                     if snapshot.holdIsInferred {
                         Pill(text: Text("inferred"), systemImage: "questionmark.circle", tint: .mwLoss)
                     }
+                    if snapshot.holdIsUnknown {
+                        Pill(text: Text("hold status unknown"), systemImage: "questionmark.circle", tint: .mwLoss)
+                    }
                     if monitor.thermal.lowPowerMode || snapshot.lowPowerMode {
                         Pill(text: Text("Low Power"), systemImage: "battery.25", tint: .mwLoss)
                     }
@@ -97,7 +100,7 @@ struct DashboardView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.mwDanger)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Thermal throttling active")
+                    Text("High system thermal pressure")
                         .font(.system(size: 14, weight: .semibold))
                     Text(monitor.thermal.state.chargingEffect)
                         .font(.caption)
@@ -168,14 +171,14 @@ struct DashboardView: View {
                            unit: "W", tint: .mwBattery, size: 22)
                 }
                 HStack(alignment: .top, spacing: 10) {
-                    Metric(caption: "Lost as heat",
-                           value: snapshot.conversionLossWatts.map(Formatting.watts) ?? "—",
+                    Metric(caption: "Load + loss",
+                           value: snapshot.unaccountedPowerWatts.map(Formatting.watts) ?? "—",
                            unit: "W", tint: .mwLoss, size: 22)
-                    Metric(caption: "Efficiency",
-                           value: snapshot.conversionEfficiency.map { String(format: "%.0f", $0) } ?? "—",
+                    Metric(caption: "Cell share",
+                           value: snapshot.chargePathEfficiency.map { String(format: "%.0f", $0) } ?? "—",
                            unit: "%",
                            tint: efficiencyTint,
-                           footnote: Text("cell watts ÷ charger watts"),
+                           footnote: Text("cell watts ÷ measured input watts"),
                            size: 22)
                 }
                 if let input = snapshot.inputWatts, input > 0.2, let battery = snapshot.batteryWatts, battery > 0 {
@@ -190,7 +193,7 @@ struct DashboardView: View {
     }
 
     private var efficiencyTint: Color {
-        guard let efficiency = snapshot.conversionEfficiency else { return .primary }
+        guard let efficiency = snapshot.chargePathEfficiency else { return .primary }
         return efficiency >= 85 ? .mwBattery : (efficiency >= 70 ? .mwLoss : .mwDanger)
     }
 
@@ -229,8 +232,8 @@ struct DashboardView: View {
                         Metric(caption: "Into cell",
                                value: String(format: "%.0f", totals.batteryMilliAmpHours),
                                unit: "mAh", size: 20)
-                        Metric(caption: "Round trip",
-                               value: totals.efficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
+                        Metric(caption: "Cell share",
+                               value: totals.chargePathEfficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
                                unit: "%", tint: .mwLoss, size: 20)
                     }
                 }
@@ -249,7 +252,7 @@ struct DashboardView: View {
     }
 }
 
-/// The input-versus-stored split, drawn as one bar so the loss has a size.
+/// The input-versus-stored split, drawn as one bar so unaccounted power has a size.
 struct PowerFlowBar: View {
     let input: Double
     let toBattery: Double

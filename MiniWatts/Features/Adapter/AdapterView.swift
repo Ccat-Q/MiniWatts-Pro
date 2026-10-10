@@ -73,7 +73,7 @@ struct AdapterView: View {
     private var headroomReason: LocalizedStringResource? {
         guard let utilisation = snapshot.adapterUtilisation, utilisation < 0.75 else { return nil }
         if monitor.thermal.state.isThrottling {
-            return "Well under the adapter's rating while the system is thermally throttling — the ceiling right now is heat, not the charger."
+            return "Well under the adapter's rating while system thermal pressure is high. Charge current may be limited by iOS."
         }
         if snapshot.isChargingOnHold {
             return "Charging is on hold, so almost nothing is being drawn. Optimized Battery Charging or a charge limit looks exactly like this."

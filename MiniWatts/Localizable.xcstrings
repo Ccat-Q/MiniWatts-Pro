@@ -759,16 +759,6 @@
         }
       }
     },
-    "cell watts ÷ charger watts" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯功率 ÷ 充电器功率"
-          }
-        }
-      }
-    },
     "Celsius" : {
       "localizations" : {
         "zh-Hans" : {
@@ -835,16 +825,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "电池电量"
-          }
-        }
-      }
-    },
-    "Charge power below the adapter's rating right now is expected: the limit is the system's, not the charger's." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前充电功率低于适配器额定功率属正常现象：此时的功率限制来自系统温控，而非充电器。"
           }
         }
       }
@@ -1055,16 +1035,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "耳机 + 充电盒"
-          }
-        }
-      }
-    },
-    "Efficiency" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "转换效率"
           }
         }
       }
@@ -1399,26 +1369,6 @@
         }
       }
     },
-    "Lost" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "损耗"
-          }
-        }
-      }
-    },
-    "Lost as heat" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发热损耗"
-          }
-        }
-      }
-    },
     "low" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1595,16 +1545,6 @@
         }
       }
     },
-    "No thermal limit on charge current." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "充电电流不受发热限制。"
-          }
-        }
-      }
-    },
     "Nominal" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1661,16 +1601,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "其他传感器"
-          }
-        }
-      }
-    },
-    "Overheated: charging is suspended until the phone cools." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设备过热：已暂停充电，直至手机冷却。"
           }
         }
       }
@@ -1821,16 +1751,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "右"
-          }
-        }
-      }
-    },
-    "Round trip" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "综合效率"
           }
         }
       }
@@ -2015,16 +1935,6 @@
         }
       }
     },
-    "Thermal throttling active" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "温控限制已生效"
-          }
-        }
-      }
-    },
     "This adapter published no PD profile menu. Legacy USB-A chargers and some wireless pads report only a single voltage and current." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2081,16 +1991,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "节流"
-          }
-        }
-      }
-    },
-    "Throttling: iOS is limiting charge current and clocks." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发热限频：iOS 正在限制充电电流与芯片频率。"
           }
         }
       }
@@ -2155,16 +2055,6 @@
         }
       }
     },
-    "Unrecognised thermal state." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未识别的发热状态。"
-          }
-        }
-      }
-    },
     "USB-C" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2225,32 +2115,12 @@
         }
       }
     },
-    "Warming up. Charge current may be trimmed." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "温度上升中，充电电流可能会被削减。"
-          }
-        }
-      }
-    },
     "Watts" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "功率"
-          }
-        }
-      }
-    },
-    "Well under the adapter's rating while the system is thermally throttling — the ceiling right now is heat, not the charger." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统正在因发热限频，功率远低于适配器额定值——此刻的瓶颈是温度，不是充电器。"
           }
         }
       }
@@ -2701,6 +2571,126 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "结束实时活动"
+          }
+        }
+      }
+    },
+    "Load + loss" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "负载与损耗"
+          }
+        }
+      }
+    },
+    "Cell share" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电芯占比"
+          }
+        }
+      }
+    },
+    "cell watts ÷ measured input watts" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电芯功率 ÷ 实测输入功率"
+          }
+        }
+      }
+    },
+    "hold status unknown" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持状态未知"
+          }
+        }
+      }
+    },
+    "No elevated system thermal pressure." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统没有升高的热压力。"
+          }
+        }
+      }
+    },
+    "Warming up. iOS may trim performance or charge current." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设备正在升温，iOS 可能降低性能或充电电流。"
+          }
+        }
+      }
+    },
+    "High system thermal pressure. iOS may limit charge current and clocks." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力较高，iOS 可能限制充电电流和处理器频率。"
+          }
+        }
+      }
+    },
+    "Critical thermal pressure. iOS may suspend charging until the phone cools." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力达到临界值，iOS 可能暂停充电，直到设备冷却。"
+          }
+        }
+      }
+    },
+    "Unrecognised system thermal state." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法识别的系统热状态。"
+          }
+        }
+      }
+    },
+    "High system thermal pressure" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力较高"
+          }
+        }
+      }
+    },
+    "Well under the adapter's rating while system thermal pressure is high. Charge current may be limited by iOS." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力较高时，功率明显低于充电器额定值。iOS 可能限制了充电电流。"
+          }
+        }
+      }
+    },
+    "Charge power below the adapter's rating right now is expected: system thermal pressure may be limiting current." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前充电功率低于适配器额定值是正常的：系统热压力可能正在限制电流。"
           }
         }
       }
