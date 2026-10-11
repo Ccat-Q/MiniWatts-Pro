@@ -102,6 +102,8 @@ jobs:
           path: |
             build/ui-tests.xcresult
             build/ui-tests.log
+            build/ui-attachments
+            build/ui-summary.json
           if-no-files-found: ignore
 
       - name: Verify app and widget identity

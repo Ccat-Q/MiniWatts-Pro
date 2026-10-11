@@ -26,9 +26,12 @@ final class ChargingInteractionTests: XCTestCase {
             button.tap()
             expectTarget(target)
         }
-        let increase = stepper.buttons["Increment"]
-        let decrease = stepper.buttons["Decrement"]
-        XCTAssertTrue(increase.exists && decrease.exists)
+        // Native labels vary between OS versions; order is decrement, increment.
+        // Keep the target/value assertions so a reversed or missing control fails.
+        print("Prediction stepper accessibility: \(stepper.debugDescription)")
+        XCTAssertEqual(stepper.buttons.count, 2)
+        let decrease = stepper.buttons.element(boundBy: 0)
+        let increase = stepper.buttons.element(boundBy: 1)
         increase.tap(); expectTarget(91)
         decrease.tap(); expectTarget(90)
         app.buttons["prediction.target.100"].tap(); expectTarget(100)
