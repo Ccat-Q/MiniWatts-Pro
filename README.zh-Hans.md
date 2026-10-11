@@ -22,6 +22,9 @@
 
 运行要求：iPhone，iOS 17 或更高版本。
 
+在 Actions 中选择 `MiniWattsPro-unsigned.ipa` 产物即可直接下载 IPA。
+新构建不再套一层 ZIP，导入签名工具前无需解压。
+
 也可以在 SideStore 或 AltStore（包括 LiveContainer 自带的 SideStore）里添加这个源，从源里安装，之后新版本会作为更新出现：
 
 ```

@@ -27,6 +27,10 @@ then expires after seven days and you re-sign it.
 
 Requires iPhone, iOS 17 or later.
 
+In Actions, select the `MiniWattsPro-unsigned.ipa` artifact to download the IPA
+directly. New builds do not wrap it in a second ZIP; no extraction is needed before
+importing the IPA into your signing tool.
+
 Or add the source to SideStore or AltStore — including the SideStore bundled with
 LiveContainer — and install from there, so new versions show up as updates:
 

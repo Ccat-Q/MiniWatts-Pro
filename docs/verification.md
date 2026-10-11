@@ -29,7 +29,7 @@
 
 每次开发分支推送均构建。交付时提供对应最终提交的成功运行链接；只有 `v*` 标签才发布 Release。
 
-产物：`MiniWattsPro-unsigned-ipa`、`MiniWatts-dSYM`、`report-test-fixtures`。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
+产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
 
 ## 真机验收边界
 
