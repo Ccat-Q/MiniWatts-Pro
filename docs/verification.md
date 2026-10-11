@@ -33,7 +33,7 @@
 - `scripts/verify-identity.py`：检查 IPA 内应用与小组件标识、显示名称、版本、iOS 17 部署目标和源配置共享组。
 - `scripts/verify-clean.sh`：检查 IPA 不含签名、描述文件、团队标识或构建机器路径。
 
-报告模拟器与应用 UI 模拟器分别在两个 macOS job 并行运行，模型与存储测试随报告 job 执行；两个 job 都通过后，`ipa` job 才构建、校验并上传交付 IPA。不会在同一 runner 争抢模拟器资源。
+报告模拟器与应用 UI 模拟器分别在两个 macOS job 并行运行，模型与存储测试随报告 job 执行；两个 job 都通过后，`ipa` job 才构建、校验并上传交付 IPA。不会在同一 runner 争抢模拟器资源。UI job 提前启动模拟器，编译与启动重叠，由 `xcodebuild test` 在安装运行前等待设备就绪。
 
 使用 `actions/cache@v4` 分别缓存报告／模型模块、模拟器 Debug 与真机 Release 的 DerivedData 编译目录。缓存键包含 runner 系统与架构、Xcode／Swift／SDK／macOS 指纹、构建脚本及工程配置和源码哈希；只从相同工具链与配置恢复旧源码缓存，之后仍由编译器判断需要重编译的内容。测试结果、模拟器用户数据、签名信息和最终 IPA 不进入缓存。缓存命中不跳过测试；首次运行建立缓存，后续命中收益依 runner 排队、启动模拟器和源码改动而异。
 

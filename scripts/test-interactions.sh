@@ -14,7 +14,8 @@ finish_tests() {
   exit "$test_status"
 }
 trap finish_tests EXIT
-xcrun simctl bootstatus "$simulator" -b
+# Compile while CoreSimulator finishes booting; xcodebuild waits for readiness
+# before it installs and launches the test runner on this explicit destination.
 xcodebuild test -project MiniWatts.xcodeproj -scheme MiniWatts \
   -configuration Debug -destination "platform=iOS Simulator,id=$simulator" \
   -derivedDataPath build/UITestDerivedData -resultBundlePath build/ui-tests.xcresult \
