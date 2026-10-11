@@ -140,4 +140,3 @@ nonisolated struct EnergyTotals: Codable, Hashable, Sendable {
         return inputWattHours * 3600 / inputMeasuredSeconds
     }
 }
-
