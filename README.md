@@ -113,7 +113,8 @@ model/storage and English/Chinese PDF/CSV tests alongside application UI tests o
 separate macOS runners. Both jobs must pass before the IPA is built, checked for
 identity and privacy, and uploaded. Compiler modules and Debug/Release build data
 are cached by toolchain and source; tests still run on every build. No local
-compilation is used for this implementation.
+compilation is used for this implementation. Duplicate push/PR runs share a branch
+concurrency group; the newest run performs all checks. Version tags remain independent.
 
 [`CLAUDE.md`](CLAUDE.md) is the engineering notebook: which APIs the sandbox blocks and
 how that was established, what each sensor turned out to be, and the Swift 6 isolation

@@ -37,7 +37,7 @@
 
 使用 `actions/cache@v4` 分别缓存报告／模型模块、模拟器 Debug 与真机 Release 的 DerivedData 编译目录。缓存键包含 runner 系统与架构、Xcode／Swift／SDK／macOS 指纹、构建脚本及工程配置和源码哈希；只从相同工具链与配置恢复旧源码缓存，之后仍由编译器判断需要重编译的内容。测试结果、模拟器用户数据、签名信息和最终 IPA 不进入缓存。缓存命中不跳过测试；首次运行建立缓存，后续命中收益依 runner 排队、启动模拟器和源码改动而异。
 
-每次开发分支推送均构建。交付时提供对应最终提交的成功运行链接；只有 `v*` 标签才发布 Release。
+每次开发分支推送均触发构建；同一来源仓库与分支的 push、PR 和手动运行共享调度组，保留最新一次完整验证，自动取消已被替代或重复的运行，避免模拟器 job 被重复构建挤占。不同版本标签分组独立，不互相取消。交付时提供对应最终提交的成功运行链接；只有 `v*` 标签才发布 Release。
 
 产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`、`interaction-test-results`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
 

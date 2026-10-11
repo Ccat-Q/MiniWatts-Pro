@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# A branch push and its PR synchronization share the same runner budget.
+# Keep the latest complete verification; distinct version tags remain independent.
+concurrency:
+  group: build-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ startsWith(github.ref, 'refs/tags/') && 'tag' || 'branch' }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   # Isolated macOS runners boot the report and application simulators concurrently.
   # Cache compilation only. Every test runs even when a cache key matches exactly.

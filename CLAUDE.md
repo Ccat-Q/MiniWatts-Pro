@@ -22,16 +22,19 @@ by several entries.
 - `TEAM_ID=… ./scripts/build-ipa.sh signed` — for your own device. No default team
   lives in this repo; `DEVELOPMENT_TEAM` is empty in the pbxproj and Xcode will
   write yours back into it if you pick one in the UI. Do not commit that.
-- `.github/workflows/build.yml` builds, verifies and (on a `v*` tag) releases. CI pins an
-  older Xcode than a development Mac usually runs, and the two compilers disagree:
+- `.github/workflows/build.yml` builds, verifies and (on a `v*` tag) releases. CI selects
+  the newest Xcode on the runner; it can differ from a development Mac's compiler:
   v1.3.0's first tag failed on a Swift 6 sending error that Xcode 27 accepted and CI's
-  Xcode 26.6 did not. A clean local `build-ipa.sh` is not enough — run the workflow by
-  hand (`gh workflow run build.yml --ref master`) and tag only once it is green.
+  Xcode 26.6 did not. All compilation and automated tests run in Actions — run the
+  workflow (`gh workflow run build.yml --ref codex/miniwatts-pro-analysis`) and tag
+  only once it is green.
 - CI runs report/model tests and application UI tests on separate macOS runners in
   parallel; the IPA job depends on both. `.github/actions/setup-xcode` shares toolchain
   checks and emits an Xcode/Swift/SDK/macOS fingerprint. Compilation caches are split
   by target/configuration and source/configuration hashes; do not cache simulator
   user data, test results or packaged artifacts, and never skip tests on cache hits.
+  A source branch shares its push/PR/manual concurrency group so duplicate runs
+  cannot consume both simulator runners; different version tags stay independent.
 - The simulator reads the **Mac's** battery through IOKit and has no HID sensors:
   fine for layout and for the adapter/PD panels, useless for anything sensor-driven.
 
