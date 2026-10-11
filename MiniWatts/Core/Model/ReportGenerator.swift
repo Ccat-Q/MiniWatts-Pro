@@ -100,13 +100,18 @@ nonisolated enum PDFReport {
     private static func text(_ key: String.LocalizationValue) -> String { String(localized: key) }
     static func write(_ sessions: [ChargeSession], to url: URL, lower: Int, upper: Int, single: Bool,
                       generated: Date, version: String, timezone: String, progress: @Sendable (Double) -> Void) throws {
+        let dates = DateFormatter()
+        dates.locale = .current
+        dates.timeZone = TimeZone(identifier: timezone) ?? .current
+        dates.dateStyle = .medium
+        dates.timeStyle = .medium
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842))
         try renderer.writePDF(to: url) { context in
             let page = PDFPage(context: context)
             page.newPage()
             page.line("MiniWatts Pro", size: 24, bold: true)
             page.line(single ? text("Charge report") : text("Charge range report"), size: 18, bold: true)
-            page.line(text("Generated") + ": " + generated.formatted(date: .numeric, time: .standard) + " · " + timezone)
+            page.line(text("Generated") + ": " + dates.string(from: generated) + " · " + timezone)
             page.line(text("App version") + ": " + version)
             page.line(text("Includes complete sessions selected by start time. Missing readings are shown as dashes."))
             let summaries = sessions.map { $0.summary() }
@@ -123,8 +128,8 @@ nonisolated enum PDFReport {
                 page.line(text("Device model") + ": " + session.deviceModel + " · " + session.systemVersion)
                 page.line(session.isWireless ? text("Wireless") : text("Wired"))
                 page.line(session.levelDescription + " · " + text("Target") + ": \(session.targetPercent)%")
-                page.line(text("Started") + ": " + session.start.formatted(date: .numeric, time: .shortened))
-                page.line(text("Ended") + ": " + (session.end?.formatted(date: .numeric, time: .shortened) ?? "—"))
+                page.line(text("Started") + ": " + dates.string(from: session.start))
+                page.line(text("Ended") + ": " + (session.end.map { dates.string(from: $0) } ?? "—"))
                 page.line(text("Average cell temp") + ": " + amount(summaries[0].averageBatteryTemperature, "°C") + "    " + text("Peak cell temp") + ": " + amount(session.peakBatteryTemperature, "°C"))
                 page.line(text("System thermal pressure") + ": " + duration(session.throttledSeconds))
                 page.line(text("Peak from charger") + ": " + amount(session.totals.inputMeasuredSeconds > 0 ? session.peakInputWatts : nil, "W"))
@@ -133,7 +138,7 @@ nonisolated enum PDFReport {
                 page.line(text("Samples") + ": \(session.samples.count) · " + text("Input measured") + ": " + duration(session.totals.inputMeasuredSeconds) + " · " + text("Battery measured") + ": " + duration(session.totals.batteryMeasuredSeconds))
                 page.chart(session.samples, title: text("Power (W) — input / battery"), first: \.inputWatts, second: \.batteryWatts)
                 page.chart(session.samples, title: text("Charge level (%)"), first: { $0.percent.map(Double.init) }, second: { _ in nil })
-                page.chart(session.samples, title: text("Battery temperature (°C)"), first: \.batteryTemperature, second: { _ in nil })
+                page.chart(session.samples, title: text("Battery temperature (°C)"), first: \.batteryTemperature, second: { _ in nil }, zeroBaseline: false)
                 progress(1)
             } else {
                 page.line(text("Comparable charge range") + ": \(lower)%–\(upper)%", size: 16, bold: true)
@@ -147,7 +152,7 @@ nonisolated enum PDFReport {
                     if ranked.count < 2 { page.line(text("Not enough comparable sessions yet.")) }
                     for (session, seconds) in ranked {
                         if Task.isCancelled { return }
-                        page.line(session.start.formatted(date: .numeric, time: .shortened) + " · " + duration(seconds) + " · " + session.deviceModel)
+                        page.line(dates.string(from: session.start) + " · " + duration(seconds) + " · " + session.deviceModel)
                         if let m = ChargeAnalysis.comparableMetrics(session, from: lower, to: upper) {
                             page.line(text("Average in / cell") + ": " + amount(m.totals.averageInputWatts, "W") + " / " + amount(m.averageBatteryWatts, "W"))
                             page.line(text("Recorded peak in / cell") + ": " + amount(m.peakInputWatts, "W") + " / " + amount(m.peakBatteryWatts, "W"))
@@ -164,7 +169,7 @@ nonisolated enum PDFReport {
                 page.line(text("Sessions"), size: 16, bold: true)
                 for (index, s) in summaries.enumerated() {
                     if Task.isCancelled { return }
-                    page.line(s.start.formatted(date: .numeric, time: .shortened) + " · " + s.levelDescription + " · " + duration(s.duration), bold: true)
+                    page.line(dates.string(from: s.start) + " · " + s.levelDescription + " · " + duration(s.duration), bold: true)
                     page.line(s.deviceModel + " · " + s.systemVersion + " · " + text("Target") + ": \(s.targetPercent)% · " + (s.isWireless ? text("Wireless") : text("Wired")))
                     page.line(text("Stored") + ": " + amount(s.measuredBatteryWattHours, "Wh") + " · " + text("Delivered") + ": " + amount(s.totals.measuredInputWattHours, "Wh") + " · " + text("Observation coverage") + ": " + amount(s.coverage * 100, "%"))
                     page.line(text("Cell share") + ": " + amount(s.totals.chargePathEfficiencyPercent, "%") + " · " + text("Average cell temp") + ": " + amount(s.averageBatteryTemperature, "°C"))
@@ -203,13 +208,15 @@ private nonisolated final class PDFPage {
         (text as NSString).draw(in: CGRect(x: 42, y: y, width: 511, height: height + 2), withAttributes: attributes)
         y += height + 7
     }
-    func chart(_ samples: [ChargeSample], title: String, first: @escaping (ChargeSample) -> Double?, second: @escaping (ChargeSample) -> Double?) {
+    func chart(_ samples: [ChargeSample], title: String, first: @escaping (ChargeSample) -> Double?, second: @escaping (ChargeSample) -> Double?, zeroBaseline: Bool = true) {
         if y + 170 > 790 { newPage() }
         line(title, size: 12, bold: true)
         let rect = CGRect(x: 42, y: y + 8, width: 511, height: 100)
         let values = (samples.compactMap(first) + samples.compactMap(second)).filter(\.isFinite)
         guard let minValue = values.min(), let maxValue = values.max() else { line(String(localized: "No reading")); return }
-        let low = min(0, minValue), high = max(maxValue, low + 1)
+        let padding = max((maxValue - minValue) * 0.1, 1)
+        let low = zeroBaseline ? min(0, minValue) : minValue - padding
+        let high = zeroBaseline ? max(maxValue, low + 1) : maxValue + padding
         let end = max(samples.last?.offset ?? 0, 1)
         let cg = context.cgContext
         cg.setStrokeColor(UIColor.lightGray.cgColor); cg.stroke(rect)

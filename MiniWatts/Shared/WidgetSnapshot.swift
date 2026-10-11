@@ -17,7 +17,7 @@ nonisolated struct WidgetSnapshot: Codable, Hashable {
         var end: Date
         var startPercent: Int?
         var endPercent: Int?
-        var storedWattHours: Double
+        var storedWattHours: Double?
         /// Nil when the input side was never measurable — a wireless charge.
         var deliveredWattHours: Double?
         var efficiencyPercent: Double?

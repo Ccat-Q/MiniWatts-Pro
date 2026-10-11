@@ -2,6 +2,8 @@
 
 状态：用户已确认按此计划实施。以下规则为实施与验收依据；构建和测试通过情况以最终 GitHub Actions 运行结果为准。
 
+实现已覆盖下述功能；实现文件、自动化验收范围、产物及真机验证边界见 [verification.md](verification.md)。
+
 功能规范见 [analysis-design.md](analysis-design.md)，领域术语见 [CONTEXT.md](../CONTEXT.md)。所有编译和自动化测试使用 GitHub Actions，本地只做非编译的源码、配置、文档及脚本检查。
 
 ## 目标与范围

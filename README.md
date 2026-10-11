@@ -89,6 +89,7 @@ background gaps are excluded. See [the feature specification](docs/analysis-desi
 All compilation and automated tests run in GitHub Actions. Development builds provide
 `MiniWattsPro-unsigned.ipa` as a workflow artifact; version-tag builds publish releases.
 Device interaction and sensor validity still require testing on an iPhone.
+See [implementation and verification](docs/verification.md) for the checks and report test fixtures.
 
 ## Build
 

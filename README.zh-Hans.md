@@ -58,6 +58,7 @@ MiniWatts Pro 与原版 MiniWatts 独立安装，拥有自己的历史记录，�
 
 全部编译与自动化测试由 GitHub Actions 执行。开发构建提供 `MiniWattsPro-unsigned.ipa`
 工作流产物，版本标签构建发布 Release；界面交互和传感器有效性仍需 iPhone 验证。
+验证范围与报告测试产物见[实现与验收说明](docs/verification.md)。
 
 ## 构建
 

@@ -43,6 +43,7 @@ import UIKit
         let text = pdf.string ?? ""
         check(pdf.pageCount >= 2, "Full single report must paginate its three charts")
         check(text.contains("iPhone-test") && text.contains("iOS-test") && text.contains("test-version") && text.contains("Asia/Shanghai"), "PDF context must be present")
+        check(text.contains("10:46:40"), "PDF dates must use the timezone captured in the report metadata")
         check(text.contains("13.5 Wh") && text.contains("10.8 Wh") && text.contains("80.0 %"), "PDF totals must match the common analysis model")
         check(text.contains(chinese ? "充电报告" : "Charge report"), "Report language must follow the application bundle")
         let range = try ReportGenerator.generate(records, pdf: true, lower: 20, upper: 80, single: false,
@@ -64,6 +65,14 @@ import UIKit
         check(summary.contains("Adapter, \"\"quoted\"\""), "Export must escape real adapter names")
         check(samples.components(separatedBy: "\r\n").count == records[0].samples.count + 2, "Every actual sample must be exported")
         check(samples.contains("\"300\",\"24\",\"\",\"8\""), "Missing input must stay empty in sample CSV")
+        let selection = Array(records.prefix(2))
+        let multiple = try await ReportGenerator.generateCSV(selection.map { $0.summary() }, generated: generated,
+                        version: "test-version", timezone: "UTC", lower: 20, upper: 80,
+                        load: { snapshot in selection.first { $0.id == snapshot.id }! }, progress: { _ in })
+        defer { try? FileManager.default.removeItem(at: multiple.directory) }
+        let multipleSamples = try String(contentsOf: multiple.urls[1], encoding: .utf8)
+        check(multipleSamples.components(separatedBy: "\r\n").count == selection.reduce(0) { $0 + $1.samples.count } + 2,
+              "Streaming multiple sessions must preserve every sample")
         do {
             _ = try await ReportGenerator.generateCSV([records[1].summary()], generated: generated,
                         version: "", timezone: "UTC", lower: 20, upper: 80, load: { _ in selected }, progress: { _ in })
@@ -112,6 +121,15 @@ import UIKit
             do { _ = try await duringWrite.value; fatalError("Cancellation while writing must be honored") }
             catch is CancellationError { }
         }
+        let cancelledStream = Task.detached {
+            try await ReportGenerator.generateCSV(selection.map { $0.summary() }, generated: generated,
+                        version: "", timezone: "UTC", lower: 20, upper: 80,
+                        load: { snapshot in selection.first { $0.id == snapshot.id }! }, progress: { _ in
+                            withUnsafeCurrentTask { $0?.cancel() }
+                        })
+        }
+        do { _ = try await cancelledStream.value; fatalError("Streaming export cancellation must be honored") }
+        catch is CancellationError { }
         let final = Set(try FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path))
         check(final.subtracting(before).filter { $0.hasPrefix("MiniWattsPro-") }.isEmpty, "Partial PDF and CSV files must be removed after cancellation")
         print("PDF pagination, \(chinese ? "Chinese" : "English") localization, CSV consistency, empty selection and cancellation passed")

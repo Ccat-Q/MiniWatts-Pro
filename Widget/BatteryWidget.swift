@@ -238,7 +238,7 @@ struct LastChargeSummary: View {
                 if let start = session.startPercent, let end = session.endPercent {
                     Text(verbatim: "+\(max(end - start, 0))%")
                 } else { Text(verbatim: "—") }
-                Text(verbatim: Formatting.wattHours(session.storedWattHours))
+                Text(verbatim: session.storedWattHours.map(Formatting.wattHours) ?? "—")
                 if let efficiency = session.efficiencyPercent {
                     Text(verbatim: String(format: "%.0f%%", efficiency))
                         .foregroundStyle(palette.loss)
