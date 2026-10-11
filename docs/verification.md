@@ -41,6 +41,12 @@
 
 产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`、`interaction-test-results`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
 
+## 本轮 Actions 验收记录
+
+2026-10-11，提交 `2f330c61fd58dd95843db86fb99cca8a0fb30e3a` 的[完整运行](https://github.com/Ccat-Q/MiniWatts-Pro/actions/runs/38182689659)通过：模型／存储、中英文 PDF／CSV、真实应用预测控件与目标保存、前后台往返，以及 IPA 身份和隐私检查。报告 job 为 3 分 59 秒，UI job 为 9 分 9 秒，IPA job 为 1 分 43 秒；时长包含模拟器启动、测试及上传，不能据此承诺固定加速比例。
+
+报告编译缓存命中并恢复后仍完整运行测试；Release 编译缓存成功保存。后续复验使用相同应用源码、工具链和构建配置，检查恢复编译数据后的测试与 IPA，而不复用测试结果。用户报告的 iPhone 17／iOS 27.0.1 仍按下述真机边界验收。
+
 ## 真机验收边界
 
 Actions 成功证明源码可编译及合成数据规则通过，不证明私有传感器在所有机型上的含义或预测误差。安装后仍需检查：
