@@ -11,10 +11,14 @@ import Foundation
         for offset in stride(from: 0, through: 81 * secondsPerPercent, by: 5) {
             s.samples.append(ChargeSample(offset: Double(offset), inputWatts: wireless ? nil : 10, batteryWatts: 8,
                                           percent: min(100, 19 + offset / secondsPerPercent), batteryTemperature: 30,
-                                          hottestTemperature: 35, throttled: false))
+                                          hottestTemperature: 35, throttled: false, observedSeconds: Double(offset)))
         }
         s.end = start.addingTimeInterval(Double(81 * secondsPerPercent))
         s.lastObserved = s.end!
+        s.endPercent = 100
+        s.peakInputWatts = wireless ? 0 : 10
+        s.peakBatteryWatts = 8
+        s.peakBatteryTemperature = 30
         s.totals.integratedSeconds = s.duration
         s.totals.batteryMeasuredSeconds = s.duration
         s.totals.batteryWattHours = 8 * s.duration / 3600
@@ -39,8 +43,11 @@ import Foundation
                                       startsNewObservation: true)
         check(ChargeAnalysis.duration(gap.summary().steps, from: 20, to: 80) == nil, "Gaps cannot create full charge intervals")
         var lowCoverage = summary
-        lowCoverage.totals.integratedSeconds = lowCoverage.duration * 0.8
+        lowCoverage.steps = summary.steps.map { ChargeStep(from: $0.from, seconds: $0.seconds, run: $0.run, observedSeconds: $0.seconds * 0.8) }
         check(ChargeAnalysis.comparableSeconds(lowCoverage, from: 20, to: 80) == nil, "Low coverage is not ranked")
+        var badTail = summary
+        badTail.totals.integratedSeconds = badTail.duration * 0.1
+        check(ChargeAnalysis.comparableSeconds(badTail, from: 20, to: 80) == 7200, "Gaps outside the selected interval cannot exclude a complete interval")
         let wireless = session(wireless: true).summary()
         check(wireless.totals.measuredInputWattHours == nil && wireless.totals.chargePathEfficiencyPercent == nil, "Wireless missing input")
         var tiny = summary
@@ -51,9 +58,11 @@ import Foundation
         let predictor = ChargePredictor()
         let time = Date(timeIntervalSince1970: 20_000)
         predictor.observe(date: time, percent: 50, connected: true, charging: true)
-        let histories = [summary, summary, summary]
+        let histories = [summary, session(secondsPerPercent: 120).summary(), session(secondsPerPercent: 120).summary()]
         check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
                                  model: "test", history: histories, now: time).seconds == 6000, "Historical taper segments")
+        check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [summary, summary, summary], now: time).state == .collecting, "Three distinct records are required")
         check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: true,
                                  model: "test", history: histories, now: time).state == .collecting, "Never mix wired with wireless")
         check(predictor.estimate(percent: 80, target: 80, connected: true, charging: false, wireless: false,
@@ -61,6 +70,31 @@ import Foundation
         predictor.reset(interrupted: true)
         check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
                                  model: "test", history: histories, now: time).state == .interrupted, "No stale countdown")
+        predictor.reset()
+        for offset in 0...120 {
+            predictor.observe(date: time.addingTimeInterval(Double(offset)), percent: 50 + offset / 60, connected: true, charging: true)
+        }
+        let trend = predictor.estimate(percent: 52, target: 80, connected: true, charging: true, wireless: false,
+                                       model: "test", history: [], now: time.addingTimeInterval(120))
+        check(trend.source == .trend && trend.seconds == 1680, "Two percentage changes provide a current trend")
+        check(predictor.estimate(percent: 52, target: 90, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(120)).seconds == 2280, "Changing the target immediately recomputes ETA")
+        let taper = histories.map { session in
+            var s = session
+            s.steps = session.steps.map { ChargeStep(from: $0.from, seconds: $0.from >= 80 ? 240 : 60, run: $0.run,
+                                                      observedSeconds: $0.from >= 80 ? 240 : 60) }
+            return s
+        }
+        let hybrid = predictor.estimate(percent: 52, target: 100, connected: true, charging: true, wireless: false,
+                                        model: "test", history: taper, now: time.addingTimeInterval(120))
+        check(hybrid.source == .hybrid && hybrid.seconds == 6480, "Historical tail segments capture taper beyond the current slope")
+        predictor.observe(date: time.addingTimeInterval(131), percent: 52, connected: true, charging: true)
+        check(predictor.estimate(percent: 52, target: 80, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(131)).state == .interrupted, "A gap resets the current trend")
+        check(predictor.estimate(percent: nil, target: 80, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time).state == .noReading, "Missing percent remains missing")
+        check(predictor.estimate(percent: 52, target: 80, connected: true, charging: false, wireless: false,
+                                 model: "test", history: [], now: time).state == .paused, "A paused charge cannot show a countdown")
         check(ReportCSV.row(["a,b", "x\"y", "", "line\nbreak"]) == "\"a,b\",\"x\"\"y\",\"\",\"line\nbreak\"\r\n", "CSV escaping")
         check(ReportCSV.number(nil).isEmpty && ReportCSV.number(.nan).isEmpty, "CSV preserves missing values")
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -90,6 +124,15 @@ import Foundation
         try Data("broken".utf8).write(to: root.appendingPathComponent("index.json"))
         let rebuilt = try await SessionStore(root: root).loaded()
         check(rebuilt.count == 65, "Index rebuild from independent session files")
+        let damagedID = rebuilt.first!.id
+        try Data("broken".utf8).write(to: root.appendingPathComponent(damagedID.uuidString + ".json"))
+        try FileManager.default.removeItem(at: root.appendingPathComponent("index.json"))
+        let recoveredStore = SessionStore(root: root)
+        let recovered = try await recoveredStore.loaded()
+        let warning = await recoveredStore.readWarning()
+        check(recovered.count == 64 && warning != nil, "A damaged session is quarantined without losing other sessions")
+        let preserved = try FileManager.default.contentsOfDirectory(atPath: root.path)
+        check(preserved.contains { $0.hasPrefix(damagedID.uuidString + ".corrupt-") }, "The damaged original must remain available")
         let bad = root.appendingPathComponent("not-a-directory")
         try Data().write(to: bad)
         do { _ = try await SessionStore(root: bad).save(original); fatalError("Disk failure must be reported") }

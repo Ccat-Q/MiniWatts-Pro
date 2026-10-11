@@ -95,7 +95,7 @@ nonisolated struct EnergyTotals: Codable, Hashable, Sendable {
     /// Share of measured adapter energy that reached the cell, 0…100.
     /// This is charge-path efficiency, not a round-trip battery efficiency.
     var chargePathEfficiencyPercent: Double? {
-        guard pairedInputWattHours > 0.001, pairedBatteryWattHours > 0 else { return nil }
+        guard pairedInputWattHours > 0.001 else { return nil }
         return min(pairedBatteryWattHours / pairedInputWattHours, 1) * 100
     }
 

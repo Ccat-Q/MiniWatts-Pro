@@ -50,20 +50,24 @@ actor SessionStore {
         for id in ids {
             let modified = try url(id).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate ?? .distantPast
             if values[id] == nil || values[id]?.isOpen == true || modified > indexDate {
+                var session: ChargeSession
                 do {
-                    var session = try read(id)
-                    if session.isOpen {
-                        session.end = session.lastObserved
-                        session.interrupted = true
-                        try JSONEncoder().encode(Document(version: 1, session: session)).write(to: url(id), options: .atomic)
-                    }
-                    values[id] = session.summary()
+                    session = try read(id)
                 } catch {
+                    // Read permission/I/O failures must not rename a valid record.
+                    guard error is DecodingError || (error as NSError).domain == "MiniWattsPro.History" else { throw error }
                     let preserved = root.appendingPathComponent(id.uuidString + ".corrupt-" + UUID().uuidString)
                     try FileManager.default.moveItem(at: url(id), to: preserved)
                     warnings.append(String(localized: "A damaged session was preserved separately.") + " " + preserved.lastPathComponent)
                     values[id] = nil
+                    continue
                 }
+                if session.isOpen {
+                    session.end = session.lastObserved
+                    session.interrupted = true
+                    try JSONEncoder().encode(Document(version: 1, session: session)).write(to: url(id), options: .atomic)
+                }
+                values[id] = session.summary()
             }
         }
         cache = values

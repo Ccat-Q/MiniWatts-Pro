@@ -1,4 +1,4 @@
-# MiniWatts
+# MiniWatts Pro
 
 Sideload-only iPhone battery instrument. Private APIs; never App Store safe.
 
@@ -44,8 +44,8 @@ by several entries.
   temperature four times did four linear scans and called `SensorCatalog.zone(for:)`
   (which lowercases and splits) once per sensor per scan. Registry lookups stay
   computed: those are single hash hits. Also here:
-  `EnergyAccumulator` integrates ∫V·I dt; `ChargeSession` + `SessionStore` persist charges
-  as one JSON file in Application Support.
+  `EnergyAccumulator` integrates ∫V·I dt; `ChargeSession` + the `SessionStore` actor persist versioned per-session JSON files
+  and a rebuildable summary index in Application Support. Complete samples load on demand.
 - `Core/PowerMonitor.swift` — `@Observable`, 1 s tick, drives everything and owns session
   lifecycle. Injected once in `MiniWattsApp`, read via `@Environment(PowerMonitor.self)`.
   `headline` lives here rather than on the snapshot: its last fallback is the %-rate
@@ -103,11 +103,20 @@ foreground. Three things make that work and they are easy to undo by accident:
   recorded. UIKit stays in the view layer; `Core` only holds the preference. The other
   way to keep the tick alive is the floating meter, which runs through a locked screen.
 
-`SessionStore` encodes and writes on its own serial queue, coalescing bursts, and the
-load in `PowerMonitor.init` is a `Task`. At the ceiling — 60 sessions × 1,500 samples —
-the file is several megabytes, and doing that inline was a stall before the first frame
-and again every thirty seconds during a charge. `persist()` is a no-op until `isLoaded`,
-or a save landing before the load would truncate the history to nothing.
+`SessionStore` serializes disk work on its actor, stores all five-second points and all
+sessions, and writes only the changed session plus an index without full curves. It
+reports failures, rebuilds stale/corrupt indexes from independent session files and
+preserves damaged sessions separately. Current records are protected from history
+cleanup. An unfinished record is closed at its last observed timestamp after a crash.
+
+`ChargePredictor` uses recent complete percent transitions and same-device,
+same-transport historical five-percent segments. Missing level, holds and observation
+gaps stop active prediction; the target defaults to 100% and is not a system charge
+limit. `ChargeAnalysis` supplies the same calculations for UI and reports. Keep this
+pure model layer independent of UIKit so GitHub Actions can test it directly.
+
+All compilation runs in GitHub Actions, including model tests and iOS builds. The
+development branch triggers the workflow; only a `v*` tag publishes a release.
 
 ## Localization
 
@@ -284,7 +293,7 @@ exactly that reason.
 **The extension reads the sensors itself.** `ReadingProbe` runs the app's IOKit and HID code
 at every timeline refresh. It keeps a single `HIDSensors` for the life of the process: a
 second client in one process reads NaN, and the extension's process can outlive a refresh.
-The App Group file the app writes (`WidgetSnapshot`, `group.org.zhaohe.MiniWatts`) is a
+The App Group file the app writes (`WidgetSnapshot`, `group.io.github.ccatq.MiniWattsPro`) is a
 fallback plus the last finished charge, and may not exist at all — re-signing tools differ
 on whether they carry an App Group entitlement over, and AltStore only grants custom
 entitlements to a handful of apps. Everything that reads it treats `nil` as normal.
@@ -456,7 +465,7 @@ every registered device** — five of them, in the build checked. Never publish 
 **The app source** (SideStore, AltStore, LiveContainer's bundled SideStore) is
 `apps.json`, written by `scripts/make-source.py` from the release's ipa and attached to
 the release by CI. Users add
-`https://github.com/ResistanceTo/MiniWatts/releases/latest/download/apps.json`, which
+`https://github.com/Ccat-Q/MiniWatts-Pro/releases/latest/download/apps.json`, which
 GitHub redirects to the newest non-prerelease's copy — so the address never changes, beta
 tags never reach it, and no bot commits back to master. Version, build, size and privacy
 keys are read from the ipa, never typed: AltStore compares them with what it downloads and
@@ -600,8 +609,17 @@ Profiler.
   inside the hole.
 - **An unreadable history file is moved aside**, to `charge-sessions.corrupt-<time>.json`,
   and Raw data says so. Moved, not copied, or every launch sets aside another one.
-- A build older than v1.5.0 cannot read a v1.5.0 history file (optional samples), and
-  would overwrite it. Nothing to do about that from here; it only bites on a downgrade.
+- MiniWatts Pro uses independent bundle and App Group identifiers and a versioned
+  history format. It does not import the original MiniWatts history.
+- **Completion ETA stops on interruption.** `ChargePredictor` is separate from the
+  legacy watts-from-percentage estimator described above. Pausing resets its current
+  trend and breaks energy/thermal observation; history uses complete, >=90%-observed
+  segments, with three distinct records per 5% segment. Coverage is checked in the
+  selected interval, independently of missing data outside that interval.
+- **Reports share the model calculations.** `ReportGenerator` contains UIKit PDF
+  drawing and streaming CSV output; `ReportExportController` owns the UI task and
+  system sharing. Actions runs the real renderer on an iOS simulator in English and
+  Chinese, checking pagination, common totals, empty selections and cancellation.
 
 Checked in the simulator only, where the Mac's battery stands in: the wired input side —
 "Load + loss", "Cell share", the input line on the charts — has not been seen on a device

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks that an .ipa carries nothing about whoever built it.
 #
-#   ./scripts/verify-clean.sh build/export/MiniWatts-unsigned.ipa
+#   ./scripts/verify-clean.sh build/export/MiniWattsPro-unsigned.ipa
 #
 # Every one of these has actually leaked at some point: signing identities are the
 # obvious case, but absolute build paths reach the binary twice over — through

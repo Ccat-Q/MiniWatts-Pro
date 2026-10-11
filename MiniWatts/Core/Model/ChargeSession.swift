@@ -10,6 +10,8 @@ nonisolated struct ChargeSample: Codable, Hashable, Identifiable, Sendable {
     let throttled: Bool
     var isCharging: Bool = true
     var startsNewObservation: Bool = false
+    /// Cumulative foreground observation time at this sample, independent of rail availability.
+    var observedSeconds: TimeInterval = 0
     var id: TimeInterval { offset }
 }
 
@@ -18,6 +20,7 @@ nonisolated struct ChargeStep: Codable, Hashable, Sendable {
     let from: Int
     let seconds: TimeInterval
     let run: Int
+    let observedSeconds: TimeInterval
 }
 
 nonisolated struct ChargeSession: Codable, Identifiable, Hashable, Sendable {

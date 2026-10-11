@@ -1,0 +1,72 @@
+import Foundation
+import PDFKit
+
+/// Runs against the real UIKit report renderer in an iOS simulator on Actions.
+@main struct ReportTests {
+    static func check(_ condition: @autoclosure () -> Bool, _ message: String) {
+        if !condition() { fatalError(message) }
+    }
+    static func session() -> ChargeSession {
+        var s = ChargeSession(start: Date(timeIntervalSince1970: 1_000), startPercent: 19,
+                              adapterName: "Adapter, \"quoted\"", adapterRatedWatts: 30, isWireless: false)
+        s.deviceModel = "iPhone-test"; s.systemVersion = "iOS-test"; s.endPercent = 100
+        for offset in stride(from: 0, through: 4860, by: 5) {
+            s.samples.append(ChargeSample(offset: Double(offset), inputWatts: offset == 300 ? nil : 10,
+                batteryWatts: 8, percent: 19 + offset / 60, batteryTemperature: 30, hottestTemperature: 35,
+                throttled: false, observedSeconds: Double(offset)))
+        }
+        s.end = s.start.addingTimeInterval(4860); s.lastObserved = s.end!
+        s.totals.integratedSeconds = s.duration
+        s.totals.inputMeasuredSeconds = s.duration; s.totals.batteryMeasuredSeconds = s.duration
+        s.totals.inputWattHours = 13.5; s.totals.batteryWattHours = 10.8
+        s.totals.pairedInputWattHours = 13.5; s.totals.pairedBatteryWattHours = 10.8
+        s.peakInputWatts = 10; s.peakBatteryWatts = 8; s.peakBatteryTemperature = 30
+        return s
+    }
+    static func main() async throws {
+        let chinese = CommandLine.arguments.contains("--chinese")
+        let records = (0..<70).map { _ in session() }
+        let generated = Date(timeIntervalSince1970: 10_000)
+        let single = try ReportGenerator.generate([records[0]], pdf: true, lower: 20, upper: 80, single: true,
+                          generated: generated, version: "test-version", timezone: "Asia/Shanghai", progress: { _ in })
+        defer { try? FileManager.default.removeItem(at: single.directory) }
+        guard let pdf = PDFDocument(url: single.urls[0]) else { fatalError("Single PDF must be readable") }
+        let text = pdf.string ?? ""
+        check(pdf.pageCount >= 2, "Full single report must paginate its three charts")
+        check(text.contains("iPhone-test") && text.contains("iOS-test") && text.contains("test-version") && text.contains("Asia/Shanghai"), "PDF context must be present")
+        check(text.contains("13.5 Wh") && text.contains("10.8 Wh") && text.contains("80.0 %"), "PDF totals must match the common analysis model")
+        check(text.contains(chinese ? "充电报告" : "Charge report"), "Report language must follow the application bundle")
+        let range = try ReportGenerator.generate(records, pdf: true, lower: 20, upper: 80, single: false,
+                          generated: generated, version: "test-version", timezone: "UTC", progress: { _ in })
+        defer { try? FileManager.default.removeItem(at: range.directory) }
+        guard let rangePDF = PDFDocument(url: range.urls[0]) else { fatalError("Range PDF must be readable") }
+        check(rangePDF.pageCount > 10, "Long range report must paginate")
+        check((rangePDF.string ?? "").contains("945.0 Wh"), "Range aggregate must equal the sum of the selected records")
+        let csv = try ReportGenerator.generate([records[0]], pdf: false, lower: 20, upper: 80, single: true,
+                          generated: generated, version: "test-version", timezone: "UTC", progress: { _ in })
+        defer { try? FileManager.default.removeItem(at: csv.directory) }
+        check(csv.urls.count == 2, "Export must create summary and sample CSV tables")
+        let summary = try String(contentsOf: csv.urls[0], encoding: .utf8)
+        let samples = try String(contentsOf: csv.urls[1], encoding: .utf8)
+        check(summary.contains("\"13.5\",\"10.8\",\"80\""), "CSV totals must match PDF and analysis")
+        check(summary.contains("Adapter, \"\"quoted\"\""), "Export must escape real adapter names")
+        check(samples.components(separatedBy: "\r\n").count == records[0].samples.count + 2, "Every actual sample must be exported")
+        check(samples.contains("\"300\",\"24\",\"\",\"8\""), "Missing input must stay empty in sample CSV")
+        do {
+            _ = try ReportGenerator.generate([], pdf: true, lower: 20, upper: 80, single: false,
+                        generated: generated, version: "", timezone: "UTC", progress: { _ in })
+            fatalError("Empty selection must fail")
+        } catch { }
+        let before = Set(try FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path))
+        let cancelled = Task.detached {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try ReportGenerator.generate(records, pdf: false, lower: 20, upper: 80, single: false,
+                        generated: generated, version: "", timezone: "UTC", progress: { _ in })
+        }
+        do { _ = try await cancelled.value; fatalError("Cancellation must be honored") }
+        catch is CancellationError { }
+        let after = Set(try FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path))
+        check(after.subtracting(before).filter { $0.hasPrefix("MiniWattsPro-") }.isEmpty, "Cancelled export must remove temporary files")
+        print("PDF pagination, \(chinese ? "Chinese" : "English") localization, CSV consistency, empty selection and cancellation passed")
+    }
+}

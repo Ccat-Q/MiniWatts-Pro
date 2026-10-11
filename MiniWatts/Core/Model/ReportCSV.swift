@@ -10,7 +10,7 @@ nonisolated enum ReportCSV {
     }
     static func timestamp(_ date: Date) -> String { date.ISO8601Format() }
     static let summaryHeader = ["session_id", "start_utc", "end_utc", "device_model", "system_version", "target_percent", "start_percent", "end_percent", "wireless", "duration_seconds", "observation_coverage", "input_Wh", "battery_Wh", "cell_share_percent", "load_and_loss_Wh", "average_input_W", "average_battery_W", "peak_input_W", "peak_battery_W", "peak_battery_C", "average_battery_C", "thermal_pressure_seconds", "sample_count", "interrupted", "adapter", "input_measured_seconds", "battery_measured_seconds", "paired_input_Wh", "paired_battery_Wh", "generated_utc", "app_version", "display_timezone"]
-    static let sampleHeader = ["session_id", "sample_utc", "offset_seconds", "percent", "input_W", "battery_W", "battery_C", "hottest_C", "system_thermal_pressure", "is_charging", "observation_break"]
+    static let sampleHeader = ["session_id", "sample_utc", "offset_seconds", "percent", "input_W", "battery_W", "battery_C", "hottest_C", "system_thermal_pressure", "is_charging", "observation_break", "observed_seconds"]
     static func summary(_ session: ChargeSession, generated: Date, appVersion: String, timezone: String) -> String {
         let s = session.samples.isEmpty ? session : session.summary()
         return row([s.id.uuidString, timestamp(s.start), s.end.map(timestamp) ?? "", s.deviceModel, s.systemVersion,
@@ -29,6 +29,6 @@ nonisolated enum ReportCSV {
         row([session.id.uuidString, timestamp(session.start.addingTimeInterval(sample.offset)), number(sample.offset),
              sample.percent.map(String.init) ?? "", number(sample.inputWatts), number(sample.batteryWatts),
              number(sample.batteryTemperature), number(sample.hottestTemperature), String(sample.throttled),
-             String(sample.isCharging), String(sample.startsNewObservation)])
+             String(sample.isCharging), String(sample.startsNewObservation), number(sample.observedSeconds)])
     }
 }

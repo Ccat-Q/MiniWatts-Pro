@@ -326,7 +326,7 @@ struct SettingsView: View {
                     )
                 }
                 .padding(.bottom, 4)
-                Text("MiniWatts Pro reads the phone's own power management sensors through private frameworks — IOKit, IOHIDEventSystemClient and BatteryCenter. Nothing leaves the device and nothing is written outside the app's own container.")
+                Text("MiniWatts Pro reads the phone's own power management sensors through private frameworks — IOKit, IOHIDEventSystemClient and BatteryCenter. Analysis stays on this device; reports leave only when you choose to share them.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)

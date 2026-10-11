@@ -4,7 +4,7 @@ nonisolated enum ChargeAnalysis {
     static func steps(_ samples: [ChargeSample]) -> [ChargeStep] {
         var result: [ChargeStep] = []
         var previous: ChargeSample?
-        var boundary: (percent: Int, offset: Double)?
+        var boundary: (percent: Int, offset: Double, observedSeconds: Double)?
         var run = 0
         for sample in samples {
             defer { previous = sample }
@@ -17,30 +17,38 @@ nonisolated enum ChargeAnalysis {
             }
             if percent > priorPercent {
                 if let start = boundary, start.percent == priorPercent, sample.offset > start.offset {
-                    result.append(ChargeStep(from: priorPercent, seconds: sample.offset - start.offset, run: run))
+                    result.append(ChargeStep(from: priorPercent, seconds: sample.offset - start.offset, run: run,
+                                             observedSeconds: max(0, sample.observedSeconds - start.observedSeconds)))
                 }
-                boundary = (percent, sample.offset)
+                boundary = (percent, sample.offset, sample.observedSeconds)
             }
             if !sample.isCharging { boundary = nil; run += 1 }
         }
         return result
     }
 
-    static func duration(_ steps: [ChargeStep], from lower: Int, to upper: Int) -> Double? {
+    private static func interval(_ steps: [ChargeStep], from lower: Int, to upper: Int) -> ArraySlice<ChargeStep>? {
         guard lower >= 0, upper <= 100, upper > lower else { return nil }
         for index in steps.indices where steps[index].from == lower {
             guard index + upper - lower <= steps.count else { continue }
             let slice = steps[index..<(index + upper - lower)]
             if slice.enumerated().allSatisfy({ $0.element.from == lower + $0.offset && $0.element.run == steps[index].run }) {
-                return slice.reduce(0) { $0 + $1.seconds }
+                return slice
             }
         }
         return nil
     }
 
+    static func duration(_ steps: [ChargeStep], from lower: Int, to upper: Int) -> Double? {
+        interval(steps, from: lower, to: upper)?.reduce(0) { $0 + $1.seconds }
+    }
+
     static func comparableSeconds(_ session: ChargeSession, from: Int, to: Int) -> Double? {
-        guard !session.isOpen, session.coverage >= 0.9 else { return nil }
-        return duration(session.steps, from: from, to: to)
+        guard !session.isOpen, let steps = interval(session.steps, from: from, to: to) else { return nil }
+        let seconds = steps.reduce(0) { $0 + $1.seconds }
+        let observed = steps.reduce(0) { $0 + $1.observedSeconds }
+        guard seconds > 0, observed / seconds >= 0.9 else { return nil }
+        return seconds
     }
 
     static func median(_ values: [Double]) -> Double? {
@@ -137,13 +145,14 @@ nonisolated final class ChargePredictor {
         if changes.count >= 2, let first = changes.first, let last = changes.last, last.percent > first.percent {
             rate = last.date.timeIntervalSince(first.date) / Double(last.percent - first.percent)
         }
-        let eligible = history.filter { !$0.isOpen && $0.isWireless == wireless && $0.deviceModel == model && $0.coverage >= 0.9 }
+        var seen: Set<UUID> = []
+        let eligible = history.filter { !$0.isOpen && $0.isWireless == wireless && $0.deviceModel == model && seen.insert($0.id).inserted }
         var seconds = 0.0, historical = false, trend = false, historyCount = Int.max
         var cursor = percent
         while cursor < target {
             let lower = cursor / 5 * 5
             let upper = min(lower + 5, target)
-            let values = eligible.compactMap { ChargeAnalysis.duration($0.steps, from: lower, to: lower + 5) }
+            let values = eligible.compactMap { ChargeAnalysis.comparableSeconds($0, from: lower, to: lower + 5) }
             // Current slope takes priority for the present segment; future segments capture taper.
             if cursor == percent, let rate {
                 seconds += Double(upper - cursor) * rate; trend = true

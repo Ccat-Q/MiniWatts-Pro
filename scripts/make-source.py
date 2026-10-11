@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the AltStore / SideStore source for one release, to stdout.
 
-    scripts/make-source.py build/export/MiniWatts-unsigned.ipa v1.1.0 > build/export/apps.json
+    scripts/make-source.py build/export/MiniWattsPro-unsigned.ipa v1.1.0 > build/export/apps.json
 
 CI runs this on every `v*` tag and publishes the result as an asset of the release,
 next to the ipa. That gives the source an address that never changes —
@@ -45,7 +45,7 @@ between models, so some readings may be wrong on yours.
 Includes a Home Screen and Lock Screen widget, a charging Live Activity and a floating \
 Picture in Picture meter. The widget and the Live Activity live in an app extension: \
 signing it takes one more App ID, and LiveContainer cannot run extensions, so installed \
-there MiniWatts has neither.
+there MiniWatts Pro has neither.
 
 Free and open source: https://github.com/Ccat-Q/MiniWatts-Pro"""
 
@@ -107,7 +107,7 @@ def main():
         "apps": [{
             "name": "MiniWatts Pro",
             "bundleIdentifier": BUNDLE_ID,
-            "developerName": "ResistanceTo",
+            "developerName": "Ccat-Q (based on MiniWatts by ResistanceTo)",
             "subtitle": "Live charge power, battery and thermal sensors.",
             "localizedDescription": DESCRIPTION,
             "iconURL": f"{RAW}/docs/icon.png",

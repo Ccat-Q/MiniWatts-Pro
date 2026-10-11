@@ -26,6 +26,9 @@ nonisolated final class EnergyAccumulator {
         previous = nil
     }
 
+    /// Discard the next interval after suspension without clearing the accumulated energy.
+    func breakObservation() { previous = nil }
+
     func add(_ snapshot: PowerSnapshot) {
         let sample = Sample(date: snapshot.date,
                             inputWatts: snapshot.inputWatts,

@@ -36,9 +36,8 @@ final class PowerMonitor {
     /// and registers for power-source change notifications — so if accessories are
     /// reachable at all from a sandboxed app, they show up here.
     private(set) var powerSources: [[String: Any]] = []
-    /// False until the session file has been read. Nothing is written before then:
-    /// the load is asynchronous now, and a save that landed first would overwrite
-    /// the whole history with an empty array.
+    /// False until the initial history load finishes; cleanup/export wait for this.
+    /// SessionStore serializes loading and saving independently of the UI.
     private(set) var isLoaded = false
     private(set) var historyError: String?
     private(set) var historyBytes: Int64 = 0
@@ -124,6 +123,7 @@ final class PowerMonitor {
     private let store = SessionStore()
     private let predictor = ChargePredictor()
     private var lastSessionObservation: Date?
+    private var lastSessionPercent: Int?
     private var pendingObservationBreak = false
 
     private var task: Task<Void, Never>?
@@ -211,6 +211,8 @@ final class PowerMonitor {
         task?.cancel()
         task = nil
         pendingObservationBreak = true
+        energy.breakObservation()
+        lastThermalObservationDate = nil
         predictor.reset(interrupted: true)
         chargeETA = ChargeETA(state: .interrupted)
         persist()
@@ -314,6 +316,7 @@ final class PowerMonitor {
         currentSession?.deviceModel = deviceModelIdentifier
         currentSession?.systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
         lastSessionObservation = nil
+        lastSessionPercent = nil
         pendingObservationBreak = true
         lastSampleWrite = .distantPast
         lastThermalObservationDate = snapshot.date
@@ -328,7 +331,13 @@ final class PowerMonitor {
         if let previous = lastSessionObservation, snapshot.date.timeIntervalSince(previous) > 10 {
             pendingObservationBreak = true
         }
+        if lastSessionObservation != nil {
+            if (snapshot.percent == nil) != (lastSessionPercent == nil) { pendingObservationBreak = true }
+            if let percent = snapshot.percent, let previous = lastSessionPercent,
+               percent < previous || percent - previous > 1 { pendingObservationBreak = true }
+        }
         lastSessionObservation = snapshot.date
+        lastSessionPercent = snapshot.percent
         session.totals = energy.totals
         session.peakInputWatts = max(session.peakInputWatts, snapshot.inputWatts ?? 0)
         session.peakBatteryWatts = max(session.peakBatteryWatts, snapshot.batteryWatts ?? 0)
@@ -364,7 +373,8 @@ final class PowerMonitor {
                                                 hottestTemperature: snapshot.hottestSensor?.value,
                                                 throttled: thermal.state.isThrottling,
                                                 isCharging: snapshot.isCharging,
-                                                startsNewObservation: pendingObservationBreak))
+                                                startsNewObservation: pendingObservationBreak,
+                                                observedSeconds: energy.totals.integratedSeconds))
             pendingObservationBreak = false
         }
         currentSession = session
@@ -401,7 +411,7 @@ final class PowerMonitor {
                     sessions[index] = summary
                 }
                 historyBytes = try await store.bytesUsed()
-                historyError = nil
+                historyError = storeWarning
             } catch { historyError = error.localizedDescription }
         }
     }
@@ -415,7 +425,7 @@ final class PowerMonitor {
             do {
                 sessions = try await store.delete(ids)
                 historyBytes = try await store.bytesUsed()
-                historyError = nil
+                historyError = storeWarning
                 updateETA()
             } catch {
                 historyError = error.localizedDescription
