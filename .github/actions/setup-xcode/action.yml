@@ -1,0 +1,52 @@
+name: Set up Xcode
+description: Select and validate the shared Xcode toolchain
+outputs:
+  fingerprint:
+    description: Xcode, Swift, SDK and macOS build fingerprint for compile caches
+    value: ${{ steps.fingerprint.outputs.value }}
+runs:
+  using: composite
+  steps:
+    - name: Select newest Xcode
+      shell: bash
+      run: |
+        ls -d /Applications/Xcode*.app || true
+        newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+        sudo xcode-select -s "$newest"
+        xcodebuild -version
+        swift --version
+
+    # MiniWatts uses `nonisolated` on type and extension declarations and
+    # SWIFT_DEFAULT_ACTOR_ISOLATION, so an older toolchain fails deep in the
+    # compile with errors that do not name the real cause. Say it up front.
+    - name: Check toolchain
+      shell: bash
+      run: |
+        required=6.2
+        found=$(swift -version 2>&1 | sed -n 's/.*Swift version \([0-9][0-9.]*\).*/\1/p' | head -1)
+        echo "Swift $found (need $required or newer)"
+        if [ "$(printf '%s\n%s\n' "$required" "$found" | sort -V | head -1)" != "$required" ]; then
+          echo "::error::Swift $found is too old. This project needs Swift $required or newer; pin a runner image that ships it."
+          exit 1
+        fi
+
+    # Xcode 27 beta writes `objectVersion = 110` on save, and no released Xcode —
+    # so no runner — can open that. The failure from xcodebuild is "a future Xcode
+    # project file format", which does not say what to do about it. Say it here.
+    - name: Check project format
+      shell: bash
+      run: |
+        max=77
+        found=$(sed -n 's/^[[:space:]]*objectVersion = \([0-9]*\);/\1/p' MiniWatts.xcodeproj/project.pbxproj)
+        echo "project objectVersion $found (max readable by a released Xcode: $max)"
+        if [ "$found" -gt "$max" ]; then
+          echo "::error::project.pbxproj is at objectVersion $found, which only an Xcode beta can read. Xcode re-upgraded the project format on save. In Xcode: select the project, File inspector, Project Format -> Xcode 16.0-compatible; or set objectVersion back to $max by hand. Nothing in this project needs a format newer than $max."
+          exit 1
+        fi
+
+    - name: Fingerprint toolchain and SDKs
+      id: fingerprint
+      shell: bash
+      run: |
+        fingerprint=$({ xcodebuild -version; xcrun swift --version; xcode-select -p; sw_vers; xcrun --sdk iphoneos --show-sdk-version; xcrun --sdk iphonesimulator --show-sdk-version; } | shasum -a 256 | cut -d ' ' -f 1)
+        echo "value=$fingerprint" >> "$GITHUB_OUTPUT"

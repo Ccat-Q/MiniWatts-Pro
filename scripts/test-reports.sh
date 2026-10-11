@@ -2,10 +2,10 @@
 # Run only on the macOS/Xcode GitHub Actions runner.
 set -euo pipefail
 
-mkdir -p build/ReportTests.app
+mkdir -p build/ReportTests.app build/ReportModuleCache
 sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
 architecture=$(uname -m)
-xcrun swiftc -swift-version 6 -parse-as-library \
+xcrun swiftc -swift-version 6 -parse-as-library -module-cache-path build/ReportModuleCache \
   -sdk "$sdk" -target "${architecture}-apple-ios17.0-simulator" \
   MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift \
   MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/ReportCSV.swift \

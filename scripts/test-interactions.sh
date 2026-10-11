@@ -1,6 +1,7 @@
 #!/bin/bash
 # All simulator builds and runtime interaction tests run on GitHub Actions.
 set -euo pipefail
+mkdir -p build
 simulator=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; devices=json.load(sys.stdin)["devices"]; print(next(d["udid"] for runtime in sorted(devices, reverse=True) for d in devices[runtime] if d["isAvailable"] and d["name"].startswith("iPhone")))')
 xcrun simctl boot "$simulator" || true
 finish_tests() {

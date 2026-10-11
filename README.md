@@ -109,9 +109,11 @@ See [implementation and verification](docs/verification.md) for the checks and r
 Xcode 26 or later, iOS 17 deployment target, no dependencies.
 
 Use **Actions → Build → Run workflow** for a development build. The workflow runs
-model/storage tests, simulator PDF/CSV tests in English and Chinese, and IPA identity
-and privacy checks before uploading the IPA. No local compilation is used for this
-implementation.
+model/storage and English/Chinese PDF/CSV tests alongside application UI tests on
+separate macOS runners. Both jobs must pass before the IPA is built, checked for
+identity and privacy, and uploaded. Compiler modules and Debug/Release build data
+are cached by toolchain and source; tests still run on every build. No local
+compilation is used for this implementation.
 
 [`CLAUDE.md`](CLAUDE.md) is the engineering notebook: which APIs the sandbox blocks and
 how that was established, what each sensor turned out to be, and the Swift 6 isolation
