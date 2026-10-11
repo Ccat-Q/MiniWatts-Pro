@@ -81,7 +81,7 @@ struct SessionsView: View {
                 HStack {
                     Metric(caption: "Delivered", value: value(totals.inputWh), unit: "Wh", tint: .mwAccent, size: 20)
                     Metric(caption: "Stored", value: value(totals.batteryWh), unit: "Wh", tint: .mwBattery, size: 20)
-                    Metric(caption: "Cell share", value: value(totals.cellShare), unit: "%", size: 20)
+                    Metric(caption: "Conversion efficiency", value: value(totals.cellShare), unit: "%", size: 20)
                 }
                 HStack {
                     Metric(caption: "Average in", value: value(totals.averageInputWatts), unit: "W", size: 18)
@@ -159,7 +159,7 @@ private struct RangeMetricsView: View {
             line("Average in / cell", "\(value(metrics.totals.averageInputWatts)) / \(value(metrics.averageBatteryWatts)) W")
             line("Recorded peak in / cell", "\(value(metrics.peakInputWatts)) / \(value(metrics.peakBatteryWatts)) W")
             line("Delivered / stored", "\(value(metrics.totals.measuredInputWattHours)) / \(value(metrics.batteryWh)) Wh")
-            line("Cell share / load + loss", "\(value(metrics.totals.chargePathEfficiencyPercent))% / \(value(metrics.totals.unaccountedWattHours)) Wh")
+            line("Efficiency / load + loss", "\(value(metrics.totals.chargePathEfficiencyPercent))% / \(value(metrics.totals.unaccountedWattHours)) Wh")
             line("Average / peak cell temp", "\(value(metrics.averageTemperature)) / \(value(metrics.peakTemperature)) °C")
             line("System thermal pressure", Formatting.duration(metrics.thermalPressureSeconds))
             line("Observation / input / battery coverage", "\(value(metrics.coverage * 100)) / \(value(metrics.totals.inputMeasuredSeconds / metrics.seconds * 100)) / \(value(metrics.totals.batteryMeasuredSeconds / metrics.seconds * 100))%")
@@ -250,7 +250,7 @@ struct SessionDetailView: View {
                 DetailRow(label: "Target", value: "\(record.targetPercent)%")
                 DetailRow(label: "Delivered", value: record.totals.measuredInputWattHours.map { "\(value($0)) Wh" })
                 DetailRow(label: "Stored", value: record.measuredBatteryWattHours.map { "\(value($0)) Wh" })
-                DetailRow(label: "Cell share", value: record.totals.chargePathEfficiencyPercent.map { "\(value($0))%" })
+                DetailRow(label: "Session efficiency", value: record.totals.chargePathEfficiencyPercent.map { "\(value($0))%" })
                 DetailRow(label: "Load + loss", value: record.totals.unaccountedWattHours.map { "\(value($0)) Wh" })
                 DetailRow(label: "Average in", value: record.totals.averageInputWatts.map { "\(value($0)) W" })
                 DetailRow(label: "Average cell", value: record.averageBatteryWatts.map { "\(value($0)) W" })

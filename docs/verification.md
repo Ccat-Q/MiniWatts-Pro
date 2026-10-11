@@ -12,6 +12,8 @@
 | 完整采样、摘要索引、恢复及清理 | `ChargeSession`、`SessionStore` |
 | 日期筛选、加权汇总与同电量区间指标 | `ChargeAnalysis`、`ChargeRangeMetrics`、`SessionsView` |
 | 单次与日期范围报告 | `ReportGenerator`、`ReportCSV`、`ReportExportController` |
+| 瞬时／累计充电转换效率 | `ChargeEfficiency`、`PowerSnapshot`、`EnergyTotals`、`AnalysisTotals` |
+| 局部数字滚动、减少动态效果与滚动暂停 | `ReadoutTransition`、`ReadoutScrollMotion`、`Metric`、`PowerRing` |
 
 历史比较检查所选电量区间的覆盖率。能量和平均功率使用边界累计计量值，记录峰值和温度使用完整保存的样本；详情和报告明确这个口径。屏幕曲线抽点只减少绘图负担，保留观测断点与局部极值，不影响存储、计算或导出。
 
@@ -22,6 +24,7 @@
 [Build 工作流](https://github.com/Ccat-Q/MiniWatts-Pro/actions/workflows/build.yml) 执行全部编译与自动化测试。本地仅检查源码 diff、JSON、plist、entitlements 和脚本语法。
 
 - `Tests/AnalyticsTests.swift`：完整电量边界、90% 覆盖资格、区间外缺口、区间功率/能量/温度、能量加权、缺测与实测零值、日期筛选、历史与本次趋势、尾段减速、目标变化、暂停与观测中断。
+- 同一模型测试验证瞬时与累计转换效率、实测零值/净放电、低输入、非有限读数、100% 显示边界，以及同期能量和跨会话能量加权；报告测试检查中英文效率名称及同期计量说明。
 - 同一模型测试验证超过 60 次会话与超过 1,500 点仍完整保存、未结束会话保护、强退恢复、索引重建、损坏会话隔离、写入失败及删除后延迟保存不会复活记录。
 - `Tests/ReportTests.swift` 与 `scripts/test-reports.sh`：在 iOS 模拟器运行真实 PDF/CSV 生成器，验证中英文、分页、统一汇总、完整采样行数、空范围、数据变化、生成前与生成中的取消、临时文件清理及页面渲染。
 - `scripts/verify-identity.py`：检查 IPA 内应用与小组件标识、显示名称、版本、iOS 17 部署目标和源配置共享组。
@@ -39,3 +42,4 @@ Actions 成功证明源码可编译及合成数据规则通过，不证明私有
 2. 暂停/恢复、锁屏或浮窗时的实际采样，以及基于真实记录的剩余时间误差。
 3. 明暗外观、中文和大字体的布局、长历史滚动。
 4. 系统分享面板的保存/分享/取消，以及清理后当前充电继续记录。
+5. 每秒数字更新时的真机 CPU 与滚动流畅度；iOS 18+ 滚动阶段暂停、iOS 17 局部动画、减少动态效果、缺测恢复及大字体布局。

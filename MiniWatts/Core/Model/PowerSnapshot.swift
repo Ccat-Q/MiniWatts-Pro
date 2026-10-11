@@ -337,8 +337,7 @@ nonisolated struct PowerSnapshot: @unchecked Sendable {
     /// Share of measured adapter power that reaches the cell. The remainder also
     /// includes the phone's own system load, so this is charge-path efficiency.
     var chargePathEfficiency: Double? {
-        guard let inputWatts, inputWatts > 0.5, let batteryWatts, batteryWatts > 0 else { return nil }
-        return min(batteryWatts / inputWatts, 1) * 100
+        ChargeEfficiency.instantaneous(inputWatts: inputWatts, batteryWatts: batteryWatts)
     }
 
     /// Adapter power not observed at the battery rail. It is not a pure heat

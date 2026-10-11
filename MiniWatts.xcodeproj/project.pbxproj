@@ -61,6 +61,7 @@
 		E03CF1C910266219FC3F809F /* Exceptions for "MiniWatts" folder in "WidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Core/Model/ChargeEfficiency.swift,
 				Core/Model/Formatting.swift,
 				Core/Model/PowerSnapshot.swift,
 				Core/Sensors/HIDSensors.swift,

@@ -2485,16 +2485,6 @@
         }
       }
     },
-    "Cell share" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯占比"
-          }
-        }
-      }
-    },
     "cell watts ÷ measured input watts" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3685,17 +3675,6 @@
         }
       }
     },
-    "Cell share / load + loss" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯占比／负载与损耗"
-          }
-        }
-      }
-    },
     "Average / peak cell temp" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3780,7 +3759,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区间电芯占比（%）"
+            "value" : "可比区间转换效率（电芯占比，%）"
           }
         },
         "en" : {
@@ -4273,7 +4252,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "电芯占比（%）"
+            "value" : "转换效率（电芯占比，%）"
           }
         },
         "en" : {
@@ -4875,6 +4854,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "generated_utc"
+          }
+        }
+      }
+    },
+    "Conversion efficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转换效率"
+          }
+        }
+      }
+    },
+    "Session efficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计转换效率"
+          }
+        }
+      }
+    },
+    "Efficiency / load + loss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转换效率／负载与损耗"
+          }
+        }
+      }
+    },
+    "Instantaneous · cell W ÷ input W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "瞬时值 · 电芯功率 ÷ 输入功率"
+          }
+        }
+      }
+    },
+    "Paired cell Wh ÷ input Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双侧同期电芯能量 ÷ 输入能量"
+          }
+        }
+      }
+    },
+    "The share of measured input reaching the cell. Phone load and conversion loss affect this ratio." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实测输入到达电芯的比例，受手机自身用电和转换损耗影响。"
           }
         }
       }

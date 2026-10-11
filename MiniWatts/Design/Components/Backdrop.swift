@@ -125,7 +125,7 @@ struct Metric: View {
             Text(caption).mwCaption()
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
-                    .mwReadout(size: isPlaceholder ? size * 0.7 : size)
+                    .mwReadout(size: isPlaceholder ? size * 0.7 : size, animatedValue: value)
                     .foregroundStyle(isPlaceholder ? Color.mwMuted.opacity(0.55) : tint)
                 if let unit {
                     Text(unit)
@@ -198,7 +198,7 @@ struct BarRow: View {
                 }
                 Spacer(minLength: 8)
                 Text(detail)
-                    .mwReadout(size: 14, weight: .semibold)
+                    .mwReadout(size: 14, weight: .semibold, animatedValue: detail)
                     .foregroundStyle(tint)
             }
             GeometryReader { geometry in

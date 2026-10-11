@@ -168,11 +168,11 @@ struct DashboardView: View {
                     Metric(caption: "Load + loss",
                            value: snapshot.unaccountedPowerWatts.map(Formatting.watts) ?? "—",
                            unit: "W", tint: .mwLoss, size: 22)
-                    Metric(caption: "Cell share",
-                           value: snapshot.chargePathEfficiency.map { String(format: "%.0f", $0) } ?? "—",
+                    Metric(caption: "Conversion efficiency",
+                           value: snapshot.chargePathEfficiency.map { String(format: "%.1f", $0) } ?? "—",
                            unit: "%",
                            tint: efficiencyTint,
-                           footnote: Text("cell watts ÷ measured input watts"),
+                           footnote: Text("Instantaneous · cell W ÷ input W"),
                            size: 22)
                 }
                 if let input = snapshot.inputWatts, input > 0.2, let battery = snapshot.batteryWatts, battery > 0 {
@@ -182,6 +182,10 @@ struct DashboardView: View {
                     EmptyNote(text: "Charging wirelessly. The charge IC exposes the coil's voltage but no current to pair with it, so the power coming in cannot be measured — only what reaches the cell. The figure the charger reports about itself is a ceiling, not a reading, and does not move.",
                               systemImage: "wave.3.right")
                 }
+                Text("The share of measured input reaching the cell. Phone load and conversion loss affect this ratio.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.mwMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -226,9 +230,10 @@ struct DashboardView: View {
                         Metric(caption: "Into cell",
                                value: totals.batteryCurrentMeasuredSeconds > 0 ? String(format: "%.0f", totals.batteryMilliAmpHours) : "—",
                                unit: "mAh", size: 20)
-                        Metric(caption: "Cell share",
-                               value: totals.chargePathEfficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
-                               unit: "%", tint: .mwLoss, size: 20)
+                        Metric(caption: "Session efficiency",
+                               value: totals.chargePathEfficiencyPercent.map { String(format: "%.1f", $0) } ?? "—",
+                               unit: "%", tint: .mwLoss,
+                               footnote: Text("Paired cell Wh ÷ input Wh"), size: 20)
                     }
                 }
             } else {

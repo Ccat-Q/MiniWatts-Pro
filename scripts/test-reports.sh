@@ -7,7 +7,7 @@ sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
 architecture=$(uname -m)
 xcrun swiftc -swift-version 6 -parse-as-library \
   -sdk "$sdk" -target "${architecture}-apple-ios17.0-simulator" \
-  MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift \
+  MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift \
   MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/ReportCSV.swift \
   MiniWatts/Core/Model/ReportGenerator.swift Tests/ReportTests.swift \
   -o build/ReportTests.app/ReportTests

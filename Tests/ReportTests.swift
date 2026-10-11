@@ -46,6 +46,8 @@ import UIKit
         check(text.contains("10:46:40"), "PDF dates must use the timezone captured in the report metadata")
         check(text.contains("13.5 Wh") && text.contains("10.8 Wh") && text.contains("80.0 %"), "PDF totals must match the common analysis model")
         check(text.contains(chinese ? "充电报告" : "Charge report"), "Report language must follow the application bundle")
+        check(text.contains(chinese ? "转换效率" : "Conversion efficiency"), "Report efficiency must use the same visible metric as the application")
+        check(text.contains(chinese ? "双侧同期" : "Paired cell Wh"), "Report efficiency must explain its paired observation boundary")
         let range = try ReportGenerator.generate(records, pdf: true, lower: 20, upper: 80, single: false,
                           generated: generated, version: "test-version", timezone: "UTC", progress: { _ in })
         defer { try? FileManager.default.removeItem(at: range.directory) }

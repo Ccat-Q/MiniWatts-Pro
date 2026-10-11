@@ -80,6 +80,12 @@ percentage trend with comparable local history. Estimates show their basis, and 
 when charging pauses or observation is interrupted. The target does not control iOS's
 charging limit.
 
+Conversion efficiency shows the share of measured input reaching the cell: a live
+power ratio and a cumulative ratio of energies measured over matching intervals.
+Phone load and conversion loss both affect it. Missing input remains unavailable.
+Changing readouts roll briefly; Reduce Motion disables this effect, and iOS 18+
+pauses it while the page scrolls.
+
 The Analysis tab offers an overview and records, 7/30/90-day and custom date filters,
 separate wired/wireless comparisons of the same percentage range, and coverage-aware
 energy and temperature statistics. All recorded five-second samples are retained until

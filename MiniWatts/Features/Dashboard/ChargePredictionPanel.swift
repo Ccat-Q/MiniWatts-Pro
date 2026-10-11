@@ -13,7 +13,8 @@ struct ChargePredictionPanel: View {
                     }
                 }
                 if let seconds = monitor.chargeETA.seconds, monitor.chargeETA.state == .estimating {
-                    Text(verbatim: "≈ " + Formatting.duration(seconds)).mwReadout(size: 28)
+                    Text(verbatim: "≈ " + Formatting.duration(seconds))
+                        .mwReadout(size: 28, animatedValue: Formatting.duration(seconds))
                     switch monitor.chargeETA.source {
                     case .history: Text("Historical segments; \(monitor.chargeETA.historyCount) comparable records per segment.")
                     case .hybrid: Text("Recent trend + historical segments; some portions may be extrapolated.")

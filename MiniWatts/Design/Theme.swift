@@ -107,22 +107,64 @@ extension View {
     /// A large tabular readout. Monospaced digits so the number stops jittering
     /// while it updates once a second.
     ///
-    /// Readouts snap; none of them roll. The dial's did, with `.numericText()`, and
-    /// on an iPhone Air that one number cost more than everything else on the Power
-    /// page: the dial's `.animation` (since removed) put it into an animated
-    /// transaction every second, SwiftUI drew the digit roll — blurred glyphs, and
-    /// the gradient arcs around them — into a layer rendered on the CPU, and while
-    /// the page scrolled that layer was redrawn on every frame. 100–180 ms of main
-    /// thread a second, against 11 with the transition off. `.identity` is explicit,
-    /// not left out: a readout that ends up inside an animated transaction would
-    /// otherwise cross-fade.
-    func mwReadout(size: CGFloat, weight: Font.Weight = .semibold) -> some View {
+    /// Opt in by passing the displayed value. The short digit transition is
+    /// attached to this readout alone, never to the dial or its gradient arcs.
+    /// Static labels, missing readings and Reduce Motion update immediately.
+    func mwReadout(size: CGFloat, weight: Font.Weight = .semibold, animatedValue: String? = nil) -> some View {
         font(.system(size: size, weight: weight, design: .rounded))
             .monospacedDigit()
-            .contentTransition(.identity)
+            .modifier(ReadoutTransition(value: animatedValue))
     }
 
     func mwMono(size: CGFloat = 13, weight: Font.Weight = .regular) -> some View {
         font(.system(size: size, weight: weight, design: .monospaced))
+    }
+
+    /// Pause digit transitions during dragging and deceleration where SwiftUI
+    /// supplies scroll phases. iOS 17 keeps the same local, short transitions.
+    func mwPauseReadoutMotionWhileScrolling() -> some View {
+        modifier(ReadoutScrollMotion())
+    }
+}
+
+nonisolated private struct ReadoutMotionKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+nonisolated extension EnvironmentValues {
+    var mwAllowsReadoutAnimation: Bool {
+        get { self[ReadoutMotionKey.self] }
+        set { self[ReadoutMotionKey.self] = newValue }
+    }
+}
+
+private struct ReadoutTransition: ViewModifier {
+    let value: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.mwAllowsReadoutAnimation) private var allowsMotion
+
+    private var animates: Bool {
+        !reduceMotion && allowsMotion && value?.contains(where: { $0.isNumber }) == true
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .contentTransition(animates ? .numericText() : .identity)
+            .animation(animates ? .easeOut(duration: 0.18) : nil, value: value)
+            .transaction { if !animates { $0.animation = nil } }
+    }
+}
+
+private struct ReadoutScrollMotion: ViewModifier {
+    @State private var isScrolling = false
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .environment(\.mwAllowsReadoutAnimation, !isScrolling)
+                .onScrollPhaseChange { _, phase in isScrolling = phase != .idle }
+        } else {
+            content
+        }
     }
 }

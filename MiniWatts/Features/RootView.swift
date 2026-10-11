@@ -158,10 +158,7 @@ struct PageScaffold<Content: View>: View {
             ZStack {
                 PageBackdrop(glow: glow)
                 ScrollView {
-                    // Lazy, not a plain `VStack`. History puts up to sixty session
-                    // panels in here, each with its own sparkline, and an eager stack
-                    // builds and measures every one of them — while charging, once a
-                    // second, because the page reads the live session.
+                    // Long histories remain lazy while the live record updates.
                     LazyVStack(spacing: 14) {
                         PageContent(content: content)
                     }
@@ -175,6 +172,7 @@ struct PageScaffold<Content: View>: View {
                     // that width propagates up and the page starts scrolling sideways.
                     .containerRelativeFrame(.horizontal)
                 }
+                .mwPauseReadoutMotionWhileScrolling()
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.large)

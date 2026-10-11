@@ -554,14 +554,22 @@ second. Found by bisecting a test build that scrolls itself, with switches read 
 the launch environment (`xctrace record --env … --launch -- <bundle id>`): with the page
 content replaced by plain rows the CPU drawing went to 1 ms/s. Switching off the backdrop,
 the dial's shadow, its tick `Canvas` and the live chart, singly or all together, changed
-nothing. Switching off the digit roll alone took it from 116–180 ms/s to 11. Readouts
-snap now, the dial's included. Two more per-tick costs were measured there: the floating
+nothing. Switching off the digit roll alone took it from 116–180 ms/s to 11. Those
+builds used snapping readouts, including the dial. Two more per-tick costs were
+measured there: the floating
 meter's frame (above) at 15–20 ms, and the sensor read and the rest of `refresh()` at
 about 5 ms.
 
-Already removed: `contentTransition(.numericText())` on every readout, the dial's last
-(see above), and the heat map's 0.6 s animation, which was retriggered every second on a
-`blur` + `plusLighter` layer. The grid `Canvas` is `.drawingGroup()`-rasterised.
+The original fix removed `contentTransition(.numericText())` on every readout and
+the heat map's 0.6 s animation, which was retriggered every second on a `blur` +
+`plusLighter` layer. The grid `Canvas` is `.drawingGroup()`-rasterised.
+
+MiniWatts Pro now restores digit rolling at the user's request. `ReadoutTransition`
+limits it to the displayed number and 0.18 seconds; no animation is attached to the
+dial's arcs. Reduce Motion and missing/non-numeric values use identity transitions.
+`ReadoutScrollMotion` pauses them through dragging and deceleration on iOS 18+;
+iOS 17 retains only the local short transition. These safeguards have not been
+profiled on a device, so the old measurements do not establish the new CPU cost.
 
 Deliberately kept despite the cost, as design decisions: the `Backdrop`'s full-screen
 `plusLighter` glow, and `PowerRing`'s `.shadow` on a stroked arc. Both were switched off
@@ -591,12 +599,17 @@ Profiler.
   integrates a rail only over intervals where both ends were read. Files written before
   v1.5.0 stored a missing input as 0, so "was the adapter side measured" is asked of the
   totals (`measuredInputWattHours`), never of the samples.
-- **`EnergyTotals` keeps a paired total.** Efficiency ("Cell share") and the remainder
+- **`EnergyTotals` keeps a paired total.** Conversion efficiency (the cell share) and the remainder
   ("Load + loss") come from `pairedInputWattHours` / `pairedBatteryWattHours`, the energy
   over intervals where *both* rails answered. Dividing the two full totals compares
   stretches of different length whenever one rail drops out. `integratedSeconds` is every
   watched interval, whichever rails answered — History sets it against the session's
   length — and the per-rail coverage is in the `…MeasuredSeconds` fields.
+- **`ChargeEfficiency` defines both visible ratios.** Instantaneous efficiency uses
+  measured input above 0.5 W and nonnegative incoming battery power; a real zero or
+  discharge yields 0%, while absent/non-finite readings stay unavailable. Cumulative
+  efficiency uses paired energies above 0.001 Wh. Dashboard, history, PDF and CSV
+  share this calculation. Phone load affects the ratio; it does not isolate the IC.
 - **The remainder is not heat.** Input minus what reaches the cell is the phone's own load
   plus conversion loss, so it is labelled "Load + loss", never "lost as heat".
 - **Hold state has three values.** `.unknown` means no battery-current reading at all, not

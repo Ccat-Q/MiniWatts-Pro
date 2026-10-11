@@ -80,7 +80,7 @@ jobs:
       - name: Test analysis models and storage
         run: |
           mkdir -p build
-          xcrun swiftc -swift-version 6 -parse-as-library MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
+          xcrun swiftc -swift-version 6 -parse-as-library MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
           build/analysis-tests
 
       - name: Build unsigned ipa

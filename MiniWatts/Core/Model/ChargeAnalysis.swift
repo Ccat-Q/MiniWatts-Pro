@@ -127,7 +127,7 @@ nonisolated struct AnalysisTotals: Sendable {
     var cellShare: Double? {
         let input = sessions.reduce(0) { $0 + $1.totals.pairedInputWattHours }
         let battery = sessions.reduce(0) { $0 + $1.totals.pairedBatteryWattHours }
-        return input > 0.001 ? min(battery / input, 1) * 100 : nil
+        return ChargeEfficiency.cumulative(inputWattHours: input, batteryWattHours: battery)
     }
     var loadAndLossWh: Double? {
         let input = sessions.reduce(0) { $0 + $1.totals.pairedInputWattHours }

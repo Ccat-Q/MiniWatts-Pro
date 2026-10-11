@@ -82,9 +82,10 @@ struct PowerRing: View {
     private var centre: some View {
         VStack(spacing: 2) {
             if let inputWatts {
+                let displayed = Formatting.watts(inputWatts)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(Formatting.watts(inputWatts))
-                        .mwReadout(size: 52, weight: .semibold)
+                    Text(displayed)
+                        .mwReadout(size: 52, weight: .semibold, animatedValue: displayed)
                         .foregroundStyle(tint)
                     Text(verbatim: "W")
                         .font(.system(size: 20, weight: .medium, design: .rounded))

@@ -41,6 +41,27 @@ import Foundation
         return s
     }
     static func main() async throws {
+        check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: 15) == 75, "Instantaneous efficiency uses measured power")
+        check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: 0) == 0, "Measured zero cell power is zero efficiency")
+        check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: -2) == 0, "Battery discharge has no incoming charging contribution")
+        check(ChargeEfficiency.instantaneous(inputWatts: nil, batteryWatts: 15) == nil, "Missing wireless input cannot use the adapter rating")
+        check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: nil) == nil, "Missing cell power is not a zero")
+        check(ChargeEfficiency.instantaneous(inputWatts: 0.5, batteryWatts: 0.1) == nil, "Tiny input cannot supply a reliable ratio")
+        check(ChargeEfficiency.instantaneous(inputWatts: 0, batteryWatts: 0) == nil, "Zero input cannot supply a ratio")
+        check(ChargeEfficiency.instantaneous(inputWatts: .nan, batteryWatts: 1) == nil, "NaN input is unavailable")
+        check(ChargeEfficiency.instantaneous(inputWatts: .infinity, batteryWatts: 1) == nil, "Infinite input is unavailable")
+        check(ChargeEfficiency.instantaneous(inputWatts: 10, batteryWatts: .nan) == nil, "NaN cell power is unavailable")
+        check(ChargeEfficiency.instantaneous(inputWatts: 10, batteryWatts: .infinity) == nil, "Infinite cell power is unavailable")
+        check(ChargeEfficiency.instantaneous(inputWatts: 10, batteryWatts: 12) == 100, "Preserve the bounded display for mismatched rail readings")
+        check(ChargeEfficiency.cumulative(inputWattHours: 10, batteryWattHours: 8) == 80, "Cumulative efficiency uses energy")
+        check(ChargeEfficiency.cumulative(inputWattHours: 0.001, batteryWattHours: 0) == nil, "Wait for enough paired energy")
+        check(ChargeEfficiency.cumulative(inputWattHours: 10, batteryWattHours: -1) == nil, "Negative accumulated energy is invalid")
+        var unmatchedTotals = EnergyTotals()
+        unmatchedTotals.inputWattHours = 10
+        unmatchedTotals.batteryWattHours = 8
+        unmatchedTotals.pairedInputWattHours = 2
+        unmatchedTotals.pairedBatteryWattHours = 1
+        check(unmatchedTotals.chargePathEfficiencyPercent == 50, "Different observation durations must use paired energy, not whole-session totals")
         let original = session(secondsPerPercent: 120)
         let summary = original.summary()
         let day = Date(timeIntervalSince1970: 1_700_000_000)
