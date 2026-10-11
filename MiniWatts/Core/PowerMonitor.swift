@@ -40,6 +40,16 @@ final class PowerMonitor {
     /// the load is asynchronous now, and a save that landed first would overwrite
     /// the whole history with an empty array.
     private(set) var isLoaded = false
+    private(set) var historyError: String?
+    private(set) var historyBytes: Int64 = 0
+    private(set) var chargeETA = ChargeETA(state: .unplugged)
+    var chargeTarget: Int {
+        didSet {
+            chargeTarget = min(max(chargeTarget, 50), 100)
+            UserDefaults.standard.set(chargeTarget, forKey: "chargeTarget")
+            updateETA()
+        }
+    }
 
     /// Whether to hold the screen awake while the phone is plugged in.
     ///
@@ -112,6 +122,9 @@ final class PowerMonitor {
     private let energy = EnergyAccumulator()
     private let resistance = PathResistanceMeter()
     private let store = SessionStore()
+    private let predictor = ChargePredictor()
+    private var lastSessionObservation: Date?
+    private var pendingObservationBreak = false
 
     private var task: Task<Void, Never>?
     private var tick = 0
@@ -144,6 +157,8 @@ final class PowerMonitor {
 
     init() {
         let defaults = UserDefaults.standard
+        let target = defaults.integer(forKey: "chargeTarget")
+        chargeTarget = (50...100).contains(target) ? target : 100
         let stored = defaults.double(forKey: Self.wattHoursKey)
         configuredBatteryWattHours = stored > 0 ? stored : 15.0
         // Defaults to on: recording a whole charge is the point of the History tab,
@@ -159,30 +174,16 @@ final class PowerMonitor {
 
     /// Reads the session file off the main thread and merges it in.
     private func loadStoredSessions() async {
-        let stored = await store.loaded()
-        if let warning = await store.readWarning() {
-            storeWarning = warning
-            collectDiagnostics()
-        }
-        guard !discardedStoredSessions else {
-            isLoaded = true
-            return
-        }
-        let restored = stored.map { session in
-            // A session left open by a crash or a force quit is closed at its
-            // last recorded point rather than being resumed.
-            guard session.end == nil else { return session }
-            var closed = session
-            closed.end = session.start.addingTimeInterval(session.samples.last?.offset ?? 0)
-            return closed
-        }
-        .filter(Self.isWorthKeeping)
-        // A charge may have started and finished while the file was being read, so
-        // merge rather than assign, keeping whatever this run has already recorded.
-        let known = Set(sessions.map(\.id))
-        sessions = (sessions + restored.filter { !known.contains($0.id) })
-            .sorted { $0.start > $1.start }
+        do {
+            let stored = try await store.loaded()
+            storeWarning = await store.readWarning()
+            let known = Set(sessions.map(\.id))
+            sessions = (sessions + stored.filter { !known.contains($0.id) }).sorted { $0.start > $1.start }
+            historyError = storeWarning
+            historyBytes = try await store.bytesUsed()
+        } catch { historyError = error.localizedDescription }
         isLoaded = true
+        collectDiagnostics()
     }
 
     // MARK: Lifecycle
@@ -209,6 +210,9 @@ final class PowerMonitor {
     func pause() {
         task?.cancel()
         task = nil
+        pendingObservationBreak = true
+        predictor.reset(interrupted: true)
+        chargeETA = ChargeETA(state: .interrupted)
         persist()
     }
 
@@ -243,6 +247,9 @@ final class PowerMonitor {
         resistance.add(current)
         pathResistance = resistance.estimate
         updateSession(current)
+        predictor.observe(date: current.date, percent: current.percent, connected: current.externalConnected,
+                          charging: current.isCharging)
+        updateETA()
         lastExternalConnected = current.externalConnected
         onTick?(current)
     }
@@ -299,10 +306,15 @@ final class PowerMonitor {
         energy.reset()
         sessionTotals = energy.totals
         currentSession = ChargeSession(start: snapshot.date,
-                                       startPercent: snapshot.percent ?? 0,
+                                       startPercent: snapshot.percent,
                                        adapterName: snapshot.adapterName,
                                        adapterRatedWatts: snapshot.adapterRatedWatts,
                                        isWireless: snapshot.isWirelessInput)
+        currentSession?.targetPercent = chargeTarget
+        currentSession?.deviceModel = deviceModelIdentifier
+        currentSession?.systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        lastSessionObservation = nil
+        pendingObservationBreak = true
         lastSampleWrite = .distantPast
         lastThermalObservationDate = snapshot.date
     }
@@ -310,7 +322,13 @@ final class PowerMonitor {
     private func recordSample(_ snapshot: PowerSnapshot) {
         guard var session = currentSession else { return }
 
-        session.endPercent = snapshot.percent ?? session.endPercent
+        session.endPercent = snapshot.percent
+        session.lastObserved = snapshot.date
+        session.targetPercent = chargeTarget
+        if let previous = lastSessionObservation, snapshot.date.timeIntervalSince(previous) > 10 {
+            pendingObservationBreak = true
+        }
+        lastSessionObservation = snapshot.date
         session.totals = energy.totals
         session.peakInputWatts = max(session.peakInputWatts, snapshot.inputWatts ?? 0)
         session.peakBatteryWatts = max(session.peakBatteryWatts, snapshot.batteryWatts ?? 0)
@@ -331,22 +349,23 @@ final class PowerMonitor {
         // Carried on every tick rather than at close: the fit is what History uses to
         // compare one cable with another, and a session that ends while the app is
         // suspended is closed from `lastConnectedObservation` without another reading.
-        session.recordPathFit(resistance.estimate)
+        if let fit = resistance.estimate, fit.sampleCount >= (session.pathSamples ?? 0) {
+            session.pathMilliohms = fit.milliohms
+            session.pathSamples = fit.sampleCount
+        }
 
-        if snapshot.date.timeIntervalSince(lastSampleWrite) >= SessionStore.sampleInterval {
+        if pendingObservationBreak || session.samples.last?.isCharging != snapshot.isCharging
+            || snapshot.date.timeIntervalSince(lastSampleWrite) >= SessionStore.sampleInterval {
             lastSampleWrite = snapshot.date
             session.samples.append(ChargeSample(offset: snapshot.date.timeIntervalSince(session.start),
-                                                inputWatts: snapshot.inputWatts,
-                                                batteryWatts: snapshot.batteryWatts,
-                                                percent: snapshot.percent ?? session.endPercent,
+                                                inputWatts: snapshot.inputWatts, batteryWatts: snapshot.batteryWatts,
+                                                percent: snapshot.percent,
                                                 batteryTemperature: snapshot.batteryTemperature,
                                                 hottestTemperature: snapshot.hottestSensor?.value,
-                                                throttled: thermal.state.isThrottling))
-            // A very long charge is thinned in place: every other point goes, which
-            // halves the resolution without losing the shape of the curve.
-            if session.samples.count > SessionStore.sampleLimit {
-                session.samples = session.samples.enumerated().compactMap { $0.offset.isMultiple(of: 2) ? $0.element : nil }
-            }
+                                                throttled: thermal.state.isThrottling,
+                                                isCharging: snapshot.isCharging,
+                                                startsNewObservation: pendingObservationBreak))
+            pendingObservationBreak = false
         }
         currentSession = session
     }
@@ -364,29 +383,52 @@ final class PowerMonitor {
         energy.reset()
         sessionTotals = EnergyTotals()
         lastThermalObservationDate = nil
-        if Self.isWorthKeeping(session) {
-            sessions.insert(session, at: 0)
-        }
-        // Persist either way: the periodic save wrote this session while it was
-        // open, so the file has to be rewritten even when it is being discarded.
-        persist()
-    }
-
-    /// A stretch of being plugged in that moved no energy is a cable reseat, or a
-    /// phone sitting at 100 %, not a charge worth keeping.
-    private static func isWorthKeeping(_ session: ChargeSession) -> Bool {
-        session.totals.inputWattHours > 0.001 || session.gainedPercent > 0
+        sessions.insert(session.summary(), at: 0)
+        saveSession(session)
+        predictor.reset()
     }
 
     private func persist() {
-        guard isLoaded else { return }
         lastPersist = .now
-        store.save(sessions + (currentSession.map { [$0] } ?? []))
+        if let session = currentSession { saveSession(session) }
     }
 
-    func deleteSession(_ session: ChargeSession) {
-        sessions.removeAll { $0.id == session.id }
-        persist()
+    private func saveSession(_ session: ChargeSession) {
+        Task {
+            do {
+                let summary = try await store.save(session)
+                if !summary.isOpen, let index = sessions.firstIndex(where: { $0.id == summary.id }) {
+                    sessions[index] = summary
+                }
+                historyBytes = try await store.bytesUsed()
+                historyError = nil
+            } catch { historyError = error.localizedDescription }
+        }
+    }
+
+    func loadSession(_ id: UUID) async throws -> ChargeSession { try await store.detail(id) }
+
+    func deleteSession(_ session: ChargeSession) { deleteSessions(ids: [session.id]) }
+
+    func deleteSessions(ids: Set<UUID>) {
+        Task {
+            do {
+                sessions = try await store.delete(ids)
+                historyBytes = try await store.bytesUsed()
+                historyError = nil
+                updateETA()
+            } catch {
+                historyError = error.localizedDescription
+                if let stored = try? await store.loaded() { sessions = stored }
+            }
+        }
+    }
+
+    private func updateETA() {
+        chargeETA = predictor.estimate(percent: snapshot.percent, target: chargeTarget,
+                                      connected: snapshot.externalConnected, charging: snapshot.isCharging,
+                                      wireless: snapshot.isWirelessInput, model: deviceModelIdentifier,
+                                      history: sessions, now: snapshot.date)
     }
 
     /// Every recorded session on the same adapter that produced a path-resistance
@@ -414,15 +456,7 @@ final class PowerMonitor {
         return matching.sorted { ($0.pathMilliohms ?? 0) < ($1.pathMilliohms ?? 0) }
     }
 
-    func deleteAllSessions() {
-        discardedStoredSessions = true
-        sessions.removeAll()
-        currentSession = nil
-        energy.reset()
-        sessionTotals = EnergyTotals()
-        lastThermalObservationDate = nil
-        store.deleteAll()
-    }
+    func deleteAllSessions() { deleteSessions(ids: Set(sessions.map(\.id))) }
 
     // MARK: Charge hold state
 

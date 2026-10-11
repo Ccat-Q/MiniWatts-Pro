@@ -18,7 +18,8 @@ private nonisolated struct RunPoint<X: Plottable & Hashable>: Identifiable {
 
 private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [Sample],
                                                                      x: (Sample) -> X,
-                                                                     watts: (Sample) -> Double?) -> [RunPoint<X>] {
+                                                                     watts: (Sample) -> Double?,
+                                                                     breaks: (Sample, Sample) -> Bool = { _, _ in false }) -> [RunPoint<X>] {
     var points: [RunPoint<X>] = []
     var run = 0
     var runStart = 0
@@ -26,7 +27,10 @@ private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [
         if points.count - runStart == 1 { points[runStart].isAlone = true }
         runStart = points.count
     }
+    var previous: Sample?
     for sample in samples {
+        if let previous, breaks(previous, sample), points.count > runStart { close(); run += 1 }
+        previous = sample
         guard let value = watts(sample), value.isFinite else {
             if points.count > runStart {
                 close()
@@ -89,8 +93,8 @@ struct LivePowerChart: View {
     let samples: [LiveSample]
     var height: CGFloat = 130
 
-    private var inputPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.inputWatts) }
-    private var batteryPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.batteryWatts) }
+    private var inputPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.inputWatts, breaks: { $1.date.timeIntervalSince($0.date) > 10 }) }
+    private var batteryPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.batteryWatts, breaks: { $1.date.timeIntervalSince($0.date) > 10 }) }
 
     private var ceiling: Double {
         let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
@@ -134,8 +138,8 @@ struct SessionPowerChart: View {
     let samples: [ChargeSample]
     var height: CGFloat = 150
 
-    private var inputPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.inputWatts) }
-    private var batteryPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.batteryWatts) }
+    private var inputPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.inputWatts, breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 }) }
+    private var batteryPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.batteryWatts, breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 }) }
 
     private var ceiling: Double {
         let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
@@ -222,12 +226,10 @@ struct SessionClimateChart: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Chart(samples) { sample in
-                LineMark(x: .value("Elapsed", sample.offset),
-                         y: .value("Percent", Double(sample.percent)))
-                    .foregroundStyle(Color.mwWireless)
-                    .lineStyle(StrokeStyle(lineWidth: 1.8))
-                    .interpolationMethod(.monotone)
+            Chart {
+                runLines(runPoints(samples, x: \.offset, watts: { $0.percent.map(Double.init) },
+                                   breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 }),
+                         axis: "Elapsed", name: "Charge %", color: .mwWireless, style: StrokeStyle(lineWidth: 1.8))
             }
             .chartYScale(domain: 0...100)
             .chartXScale(domain: xDomain)
@@ -251,12 +253,10 @@ struct SessionClimateChart: View {
             if temperatures.isEmpty {
                 EmptyNote(text: "No cell temperature was recorded for this session.")
             } else {
-                Chart(temperatures) { sample in
-                    LineMark(x: .value("Elapsed", sample.offset),
-                             y: .value("Celsius", sample.batteryTemperature ?? 0))
-                        .foregroundStyle(Color.mwLoss)
-                        .lineStyle(StrokeStyle(lineWidth: 1.4))
-                        .interpolationMethod(.monotone)
+                Chart {
+                    runLines(runPoints(samples, x: \.offset, watts: \.batteryTemperature,
+                                       breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 }),
+                             axis: "Elapsed", name: "Battery °C", color: .mwLoss, style: StrokeStyle(lineWidth: 1.4))
                 }
                 .chartYScale(domain: temperatureDomain)
                 .chartXScale(domain: xDomain)

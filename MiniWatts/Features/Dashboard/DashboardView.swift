@@ -8,9 +8,10 @@ struct DashboardView: View {
     private var plugged: Bool { snapshot.externalConnected }
 
     var body: some View {
-        PageScaffold("MiniWatts", glow: glowColor, toolbar: AnyView(toolbarButtons)) {
+        PageScaffold("MiniWatts Pro", glow: glowColor, toolbar: AnyView(toolbarButtons)) {
             heroPanel
             if monitor.thermal.state.isThrottling { throttleBanner }
+            ChargePredictionPanel()
             batteryPanel
             breakdownPanel
             livePanel
@@ -128,14 +129,7 @@ struct DashboardView: View {
                            detail: "\(percent)%",
                            fraction: Double(percent) / 100,
                            tint: percent <= 20 ? .mwDanger : .mwBattery,
-                           subtitle: snapshot.timeRemainingMinutes.map { minutes in
-                               // Two whole sentences rather than a fragment glued to a
-                               // number: word order around the duration is not the same
-                               // in every language.
-                               let remaining = Formatting.minutesRemaining(minutes)
-                               return snapshot.isCharging ? Text("full in \(remaining)")
-                                                          : Text("empty in \(remaining)")
-                           })
+                           subtitle: nil)
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Metric(caption: "Cell voltage",
@@ -225,12 +219,12 @@ struct DashboardView: View {
                                value: totals.measuredInputWattHours.map { String(format: "%.2f", $0) } ?? "—",
                                unit: "Wh", tint: .mwAccent, size: 20)
                         Metric(caption: "Stored",
-                               value: String(format: "%.2f", totals.batteryWattHours),
+                               value: totals.batteryMeasuredSeconds > 0 ? String(format: "%.2f", totals.batteryWattHours) : "—",
                                unit: "Wh", tint: .mwBattery, size: 20)
                     }
                     HStack(alignment: .top, spacing: 10) {
                         Metric(caption: "Into cell",
-                               value: String(format: "%.0f", totals.batteryMilliAmpHours),
+                               value: totals.batteryCurrentMeasuredSeconds > 0 ? String(format: "%.0f", totals.batteryMilliAmpHours) : "—",
                                unit: "mAh", size: 20)
                         Metric(caption: "Cell share",
                                value: totals.chargePathEfficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",

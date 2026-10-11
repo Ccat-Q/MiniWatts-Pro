@@ -19,7 +19,7 @@ struct RootView: View {
             TabPage { DevicesView() }
                 .tabItem { Label("Devices", systemImage: "square.stack.3d.up.fill") }
             TabPage { SessionsView() }
-                .tabItem { Label("History", systemImage: "chart.xyaxis.line") }
+                .tabItem { Label("Analysis", systemImage: "chart.xyaxis.line") }
         }
         .tint(.mwAccent)
         .background { ScreenAwakeHolder() }

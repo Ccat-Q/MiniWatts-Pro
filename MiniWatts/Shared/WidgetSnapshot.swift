@@ -15,8 +15,8 @@ nonisolated struct WidgetSnapshot: Codable, Hashable {
     struct Session: Codable, Hashable {
         var start: Date
         var end: Date
-        var startPercent: Int
-        var endPercent: Int
+        var startPercent: Int?
+        var endPercent: Int?
         var storedWattHours: Double
         /// Nil when the input side was never measurable — a wireless charge.
         var deliveredWattHours: Double?
@@ -30,7 +30,7 @@ nonisolated struct WidgetSnapshot: Codable, Hashable {
     var reading: ChargeReading
     var lastSession: Session?
 
-    static let groupIdentifier = "group.org.zhaohe.MiniWatts"
+    static let groupIdentifier = "group.io.github.ccatq.MiniWattsPro"
     private static let filename = "widget-snapshot.json"
 
     private static var fileURL: URL? {

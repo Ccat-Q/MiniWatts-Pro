@@ -14,6 +14,7 @@ name: Build
 on:
   push:
     tags: ["v*"]
+    branches: ["codex/miniwatts-pro-analysis"]
   pull_request:
   workflow_dispatch:
 
@@ -77,12 +78,18 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: echo "MARKETING_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      - name: Test analysis models and storage
+        run: |
+          mkdir -p build
+          xcrun swiftc -swift-version 6 -parse-as-library MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
+          build/analysis-tests
+
       - name: Build unsigned ipa
         run: ./scripts/build-ipa.sh
 
       # Nothing about the machine that produced the build may reach the artifact.
       - name: Verify the ipa carries no identifying data
-        run: ./scripts/verify-clean.sh build/export/MiniWatts-unsigned.ipa
+        run: ./scripts/verify-clean.sh build/export/MiniWattsPro-unsigned.ipa
 
       # The version reaches the bundle only as a build-setting override. If that ever
       # stops working, a release named v1.2.0 would quietly ship a binary saying 1.0.
@@ -90,7 +97,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           work=$(mktemp -d)
-          unzip -q build/export/MiniWatts-unsigned.ipa -d "$work"
+          unzip -q build/export/MiniWattsPro-unsigned.ipa -d "$work"
           plist="$(ls -d "$work"/Payload/*.app)/Info.plist"
           built=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")
           number=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")
@@ -103,8 +110,8 @@ jobs:
       - name: Upload ipa
         uses: actions/upload-artifact@v4
         with:
-          name: MiniWatts-unsigned-ipa
-          path: build/export/MiniWatts-unsigned.ipa
+          name: MiniWattsPro-unsigned-ipa
+          path: build/export/MiniWattsPro-unsigned.ipa
           if-no-files-found: error
 
       # Kept separately: the ipa is stripped, so a crash report needs this to
@@ -124,14 +131,14 @@ jobs:
       # disagrees with its source on any of them.
       - name: Write the app source
         if: startsWith(github.ref, 'refs/tags/v')
-        run: python3 scripts/make-source.py build/export/MiniWatts-unsigned.ipa "$GITHUB_REF_NAME" > build/export/apps.json
+        run: python3 scripts/make-source.py build/export/MiniWattsPro-unsigned.ipa "$GITHUB_REF_NAME" > build/export/apps.json
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/export/MiniWatts-unsigned.ipa
+            build/export/MiniWattsPro-unsigned.ipa
             build/export/apps.json
           fail_on_unmatched_files: true
           generate_release_notes: true
