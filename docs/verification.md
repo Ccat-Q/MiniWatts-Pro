@@ -14,7 +14,7 @@
 | 单次与日期范围报告 | `ReportGenerator`、`ReportCSV`、`ReportExportController` |
 | 瞬时／累计充电转换效率 | `ChargeEfficiency`、`PowerSnapshot`、`EnergyTotals`、`AnalysisTotals` |
 | 数字与圆弧局部动画、减少动态效果与滚动暂停 | `ReadoutTransition`、`ReadoutScrollMotion`、`Metric`、`PowerRing` |
-| 灵动岛暂停／恢复与本地发布限频 | `ChargeActivityController`、`LiveActivityUpdateGate`、`RootView`、`ChargeLiveActivity` |
+| 灵动岛暂停／恢复与本地发布限频 | `ChargeActivityController`、`LiveActivityUpdateGate`、`FloatingMeterController`、`RootView`、`ChargeLiveActivity` |
 
 历史比较检查所选电量区间的覆盖率。能量和平均功率使用边界累计计量值，记录峰值和温度使用完整保存的样本；详情和报告明确这个口径。屏幕曲线抽点只减少绘图负担，保留观测断点与局部极值，不影响存储、计算或导出。
 

@@ -47,6 +47,19 @@ struct RootView: View {
                                   isForeground: UIApplication.shared.applicationState == .active)
                 widgets.publish(reading, lastSession: monitor.sessions.first)
             }
+            floatingMeter.onRunningChange = { [weak monitor, liveActivity] running in
+                guard UIApplication.shared.applicationState == .background,
+                      let monitor else { return }
+                if running {
+                    liveActivity.resume()
+                    monitor.start()
+                } else {
+                    monitor.pause()
+                    liveActivity.pause(monitor.snapshot,
+                                       selectedMetric: monitor.liveActivityMetric,
+                                       enabled: monitor.showsLiveActivityWhileCharging)
+                }
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
@@ -71,15 +84,6 @@ struct RootView: View {
                 // of it: a pulled-down Control Center, the app switcher, an
                 // incoming call. Nothing to do.
                 break
-            }
-        }
-        .onChange(of: floatingMeter.isRunning) { _, running in
-            guard scenePhase == .background else { return }
-            if running {
-                liveActivity.resume()
-                monitor.start()
-            } else {
-                pauseMonitoring()
             }
         }
     }
