@@ -36,5 +36,5 @@ simulator=$(xcrun simctl list devices available --json | python3 -c 'import json
 xcrun simctl boot "$simulator" || true
 trap 'xcrun simctl shutdown "$simulator" || true' EXIT
 xcrun simctl bootstatus "$simulator" -b
-xcrun simctl spawn "$simulator" "$PWD/build/ReportTests.app/ReportTests" -AppleLanguages '(en)' -AppleLocale en_US
-xcrun simctl spawn "$simulator" "$PWD/build/ReportTests.app/ReportTests" -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN --chinese
+SIMCTL_CHILD_REPORT_TEST_OUTPUT="$PWD/build/report-fixtures/en" xcrun simctl spawn "$simulator" "$PWD/build/ReportTests.app/ReportTests" -AppleLanguages '(en)' -AppleLocale en_US
+SIMCTL_CHILD_REPORT_TEST_OUTPUT="$PWD/build/report-fixtures/zh-Hans" xcrun simctl spawn "$simulator" "$PWD/build/ReportTests.app/ReportTests" -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN --chinese

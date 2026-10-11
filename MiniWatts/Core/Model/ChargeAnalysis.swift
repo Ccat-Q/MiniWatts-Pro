@@ -1,12 +1,40 @@
 import Foundation
 
+nonisolated enum AnalysisPeriod: String, CaseIterable, Identifiable, Sendable {
+    case week, month, quarter, all, custom
+    var id: Self { self }
+    var title: LocalizedStringResource {
+        switch self {
+        case .week: "7 days"
+        case .month: "30 days"
+        case .quarter: "90 days"
+        case .all: "All time"
+        case .custom: "Custom dates"
+        }
+    }
+}
+
 nonisolated enum ChargeAnalysis {
+    static func selectedSessions(_ sessions: [ChargeSession], period: AnalysisPeriod, now: Date,
+                                 from: Date, to: Date, calendar: Calendar) -> [ChargeSession] {
+        let start: Date
+        switch period {
+        case .week: start = now.addingTimeInterval(-7 * 86400)
+        case .month: start = now.addingTimeInterval(-30 * 86400)
+        case .quarter: start = now.addingTimeInterval(-90 * 86400)
+        case .all: start = .distantPast
+        case .custom: start = calendar.startOfDay(for: from)
+        }
+        let end = period == .custom ? (calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: to)) ?? to) : .distantFuture
+        return sessions.filter { !$0.isOpen && $0.start >= start && $0.start < end }
+    }
+
     static func steps(_ samples: [ChargeSample]) -> [ChargeStep] {
         var result: [ChargeStep] = []
         var previous: ChargeSample?
-        var boundary: (percent: Int, offset: Double, observedSeconds: Double)?
+        var boundary: (percent: Int, offset: Double, observedSeconds: Double, index: Int)?
         var run = 0
-        for sample in samples {
+        for (index, sample) in samples.enumerated() {
             defer { previous = sample }
             guard let percent = sample.percent, (0...100).contains(percent), let prior = previous,
                   let priorPercent = prior.percent else { boundary = nil; run += 1; continue }
@@ -18,9 +46,10 @@ nonisolated enum ChargeAnalysis {
             if percent > priorPercent {
                 if let start = boundary, start.percent == priorPercent, sample.offset > start.offset {
                     result.append(ChargeStep(from: priorPercent, seconds: sample.offset - start.offset, run: run,
-                                             observedSeconds: max(0, sample.observedSeconds - start.observedSeconds)))
+                                             observedSeconds: max(0, sample.observedSeconds - start.observedSeconds),
+                                             metrics: metrics(samples[start.index...index])))
                 }
-                boundary = (percent, sample.offset, sample.observedSeconds)
+                boundary = (percent, sample.offset, sample.observedSeconds, index)
             }
             if !sample.isCharging { boundary = nil; run += 1 }
         }
@@ -49,6 +78,32 @@ nonisolated enum ChargeAnalysis {
         let observed = steps.reduce(0) { $0 + $1.observedSeconds }
         guard seconds > 0, observed / seconds >= 0.9 else { return nil }
         return seconds
+    }
+
+    static func comparableMetrics(_ session: ChargeSession, from: Int, to: Int) -> ChargeRangeMetrics? {
+        guard comparableSeconds(session, from: from, to: to) != nil,
+              let steps = interval(session.steps, from: from, to: to), steps.allSatisfy({ $0.metrics != nil }) else { return nil }
+        return steps.reduce(into: ChargeRangeMetrics()) { result, step in result.add(step.metrics!) }
+    }
+
+    private static func metrics(_ samples: ArraySlice<ChargeSample>) -> ChargeRangeMetrics? {
+        guard let first = samples.first, let last = samples.last,
+              let startTotals = first.energyTotals, let endTotals = last.energyTotals else { return nil }
+        var result = ChargeRangeMetrics()
+        result.seconds = last.offset - first.offset
+        result.totals = endTotals.since(startTotals)
+        result.peakInputWatts = samples.compactMap(\.inputWatts).max()
+        result.peakBatteryWatts = samples.compactMap(\.batteryWatts).max()
+        result.peakTemperature = samples.compactMap(\.batteryTemperature).max()
+        result.thermalPressureSeconds = max(0, last.thermalPressureSeconds - first.thermalPressureSeconds)
+        for (a, b) in zip(samples, samples.dropFirst()) {
+            let dt = b.offset - a.offset
+            if !b.startsNewObservation, dt > 0, dt <= 10, let ta = a.batteryTemperature, let tb = b.batteryTemperature {
+                result.temperatureDegreeSeconds += (ta + tb) / 2 * dt
+                result.temperatureMeasuredSeconds += dt
+            }
+        }
+        return result
     }
 
     static func median(_ values: [Double]) -> Double? {

@@ -1,19 +1,5 @@
 import SwiftUI
 
-nonisolated enum AnalysisPeriod: String, CaseIterable, Identifiable {
-    case week, month, quarter, all, custom
-    var id: Self { self }
-    var title: LocalizedStringResource {
-        switch self {
-        case .week: "7 days"
-        case .month: "30 days"
-        case .quarter: "90 days"
-        case .all: "All time"
-        case .custom: "Custom dates"
-        }
-    }
-}
-
 extension ChargeSession {
     var titleText: Text { adapterName.map { Text(verbatim: $0) } ?? Text(fallbackTitle) }
     var measuredPeakInputWatts: Double? { totals.inputMeasuredSeconds > 0 ? peakInputWatts : nil }
@@ -30,16 +16,8 @@ struct SessionsView: View {
     @State private var deleting: Set<UUID> = []
 
     private var filtered: [ChargeSession] {
-        let start: Date
-        switch period {
-        case .week: start = .now.addingTimeInterval(-7 * 86400)
-        case .month: start = .now.addingTimeInterval(-30 * 86400)
-        case .quarter: start = .now.addingTimeInterval(-90 * 86400)
-        case .all: start = .distantPast
-        case .custom: start = Calendar.current.startOfDay(for: fromDate)
-        }
-        let end = period == .custom ? Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: toDate))! : .distantFuture
-        return monitor.sessions.filter { $0.start >= start && $0.start < end }
+        ChargeAnalysis.selectedSessions(monitor.sessions, period: period, now: .now,
+                                        from: fromDate, to: toDate, calendar: .current)
     }
 
     var body: some View {
@@ -135,16 +113,23 @@ struct SessionsView: View {
                 if ranked.count < 2 { EmptyNote(text: "Not enough comparable sessions yet.") }
                 ForEach(Array(ranked.prefix(10))) { row in
                     NavigationLink { SessionDetailView(session: row.session) } label: {
-                        HStack {
-                            Text(verbatim: Formatting.timestamp(row.session.start)).font(.caption)
-                            Spacer()
-                            Text(verbatim: Formatting.duration(row.seconds)).mwMono(size: 14)
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Text(verbatim: Formatting.timestamp(row.session.start)).font(.caption)
+                                Spacer()
+                                Text(verbatim: Formatting.duration(row.seconds)).mwMono(size: 14)
+                            }
+                            if let m = ChargeAnalysis.comparableMetrics(row.session, from: lower, to: upper) {
+                                RangeMetricsView(metrics: m)
+                            }
                         }
                     }
                 }
                 Text("\(matching.count - ranked.count) records excluded: incomplete range or insufficient coverage.")
                     .font(.caption).foregroundStyle(Color.mwMuted)
                 Text("Charger names and thermal pressure alone do not identify a charger or prove why charging slowed.")
+                    .font(.caption2).foregroundStyle(Color.mwMuted)
+                Text("Comparison values cover the selected charge interval. Recorded peaks and temperature use saved samples.")
                     .font(.caption2).foregroundStyle(Color.mwMuted)
             }
         }
@@ -165,6 +150,24 @@ nonisolated struct RankedSession: Identifiable {
     let session: ChargeSession
     let seconds: Double
     var id: UUID { session.id }
+}
+
+private struct RangeMetricsView: View {
+    let metrics: ChargeRangeMetrics
+    var body: some View {
+        VStack(spacing: 2) {
+            line("Average in / cell", "\(value(metrics.totals.averageInputWatts)) / \(value(metrics.averageBatteryWatts)) W")
+            line("Recorded peak in / cell", "\(value(metrics.peakInputWatts)) / \(value(metrics.peakBatteryWatts)) W")
+            line("Delivered / stored", "\(value(metrics.totals.measuredInputWattHours)) / \(value(metrics.batteryWh)) Wh")
+            line("Cell share / load + loss", "\(value(metrics.totals.chargePathEfficiencyPercent))% / \(value(metrics.totals.unaccountedWattHours)) Wh")
+            line("Average / peak cell temp", "\(value(metrics.averageTemperature)) / \(value(metrics.peakTemperature)) °C")
+            line("System thermal pressure", Formatting.duration(metrics.thermalPressureSeconds))
+            line("Observation / input / battery coverage", "\(value(metrics.coverage * 100)) / \(value(metrics.totals.inputMeasuredSeconds / metrics.seconds * 100)) / \(value(metrics.totals.batteryMeasuredSeconds / metrics.seconds * 100))%")
+        }.font(.caption2).foregroundStyle(Color.mwMuted)
+    }
+    private func line(_ label: LocalizedStringResource, _ value: String) -> some View {
+        HStack { Text(label); Spacer(); Text(verbatim: value) }
+    }
 }
 
 private func value(_ number: Double?) -> String { number.map { String(format: "%.1f", $0) } ?? "—" }
@@ -192,7 +195,8 @@ struct SessionRow: View {
                     Text(verbatim: session.levelDescription).mwMono(size: 12)
                 }
                 HStack {
-                    Sparkline(values: session.previewPower, tint: session.isWireless ? .mwWireless : .mwAccent).frame(height: 26)
+                    Text(verbatim: "\(value(session.averageBatteryWatts)) W").mwMono(size: 12).foregroundStyle(Color.mwBattery)
+                    Spacer()
                     Text("\(Int(session.coverage * 100))% observed").font(.caption2).foregroundStyle(Color.mwMuted)
                 }
             }
@@ -253,7 +257,7 @@ struct SessionDetailView: View {
                 DetailRow(label: "Peak from charger", value: record.measuredPeakInputWatts.map { "\(value($0)) W" })
                 DetailRow(label: "Peak into cell", value: record.totals.batteryMeasuredSeconds > 0 ? "\(value(record.peakBatteryWatts)) W" : nil)
                 DetailRow(label: "Peak cell temp", value: record.peakBatteryTemperature.map { "\(value($0)) °C" })
-                DetailRow(label: "Average cell temp", value: session.averageBatteryTemperature.map { "\(value($0)) °C" })
+                DetailRow(label: "Average cell temp", value: (detail?.summary().averageBatteryTemperature ?? session.averageBatteryTemperature).map { "\(value($0)) °C" })
                 DetailRow(label: "System thermal pressure", value: Formatting.duration(record.throttledSeconds))
                 DetailRow(label: "Path resistance", value: record.pathMilliohms.map { "\(value($0)) mΩ" })
             }

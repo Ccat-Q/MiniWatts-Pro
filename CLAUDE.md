@@ -617,7 +617,7 @@ Profiler.
   segments, with three distinct records per 5% segment. Coverage is checked in the
   selected interval, independently of missing data outside that interval.
 - **Reports share the model calculations.** `ReportGenerator` contains UIKit PDF
-  drawing and streaming CSV output; `ReportExportController` owns the UI task and
+  drawing and CSV output that loads one immutable finished session at a time; `ReportExportController` owns the UI task and
   system sharing. Actions runs the real renderer on an iOS simulator in English and
   Chinese, checking pagination, common totals, empty selections and cancellation.
 
@@ -636,3 +636,8 @@ since these changes.
   numbers come from and mark inferred values as inferred — charging holds are inferred
   from behaviour, and labelled that way.
 - User-facing copy stays in the app's voice; selector-level detail belongs in Raw data.
+
+Charge comparison energy/mean power use differences between cumulative live totals
+at fully observed percent boundaries. `ChargeRangeMetrics` combines these percent
+steps for UI/PDF/CSV; recorded interval peaks and temperatures use saved samples.
+Date-range aggregates include all available measurements and show overall coverage.

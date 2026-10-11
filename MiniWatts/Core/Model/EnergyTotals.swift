@@ -46,6 +46,32 @@ nonisolated struct EnergyTotals: Codable, Hashable, Sendable {
 
     init() {}
 
+    mutating func add(_ value: EnergyTotals) {
+        inputWattHours += value.inputWattHours
+        batteryWattHours += value.batteryWattHours
+        batteryMilliAmpHours += value.batteryMilliAmpHours
+        integratedSeconds += value.integratedSeconds
+        inputMeasuredSeconds += value.inputMeasuredSeconds
+        batteryMeasuredSeconds += value.batteryMeasuredSeconds
+        batteryCurrentMeasuredSeconds += value.batteryCurrentMeasuredSeconds
+        pairedInputWattHours += value.pairedInputWattHours
+        pairedBatteryWattHours += value.pairedBatteryWattHours
+    }
+
+    func since(_ earlier: EnergyTotals) -> EnergyTotals {
+        var result = EnergyTotals()
+        result.inputWattHours = max(0, inputWattHours - earlier.inputWattHours)
+        result.batteryWattHours = max(0, batteryWattHours - earlier.batteryWattHours)
+        result.batteryMilliAmpHours = max(0, batteryMilliAmpHours - earlier.batteryMilliAmpHours)
+        result.integratedSeconds = max(0, integratedSeconds - earlier.integratedSeconds)
+        result.inputMeasuredSeconds = max(0, inputMeasuredSeconds - earlier.inputMeasuredSeconds)
+        result.batteryMeasuredSeconds = max(0, batteryMeasuredSeconds - earlier.batteryMeasuredSeconds)
+        result.batteryCurrentMeasuredSeconds = max(0, batteryCurrentMeasuredSeconds - earlier.batteryCurrentMeasuredSeconds)
+        result.pairedInputWattHours = max(0, pairedInputWattHours - earlier.pairedInputWattHours)
+        result.pairedBatteryWattHours = max(0, pairedBatteryWattHours - earlier.pairedBatteryWattHours)
+        return result
+    }
+
     /// Older session files predate per-channel coverage. Decode them with the
     /// old aggregate duration as a conservative compatibility fallback.
     init(from decoder: Decoder) throws {

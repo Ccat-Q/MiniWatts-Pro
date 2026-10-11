@@ -374,7 +374,9 @@ final class PowerMonitor {
                                                 throttled: thermal.state.isThrottling,
                                                 isCharging: snapshot.isCharging,
                                                 startsNewObservation: pendingObservationBreak,
-                                                observedSeconds: energy.totals.integratedSeconds))
+                                                observedSeconds: energy.totals.integratedSeconds,
+                                                energyTotals: energy.totals,
+                                                thermalPressureSeconds: session.throttledSeconds))
             pendingObservationBreak = false
         }
         currentSession = session

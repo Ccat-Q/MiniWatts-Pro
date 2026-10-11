@@ -26,28 +26,74 @@ nonisolated enum ReportGenerator {
                 try Task.checkCancellation()
                 return ReportFiles(directory: directory, urls: [url])
             }
-            let summaries = directory.appendingPathComponent("MiniWattsPro-sessions.csv")
-            let samples = directory.appendingPathComponent("MiniWattsPro-samples.csv")
-            FileManager.default.createFile(atPath: summaries.path, contents: Data([0xEF, 0xBB, 0xBF]))
-            FileManager.default.createFile(atPath: samples.path, contents: Data([0xEF, 0xBB, 0xBF]))
-            let summaryFile = try FileHandle(forWritingTo: summaries)
-            let sampleFile = try FileHandle(forWritingTo: samples)
-            defer { try? summaryFile.close(); try? sampleFile.close() }
-            try summaryFile.seekToEnd(); try sampleFile.seekToEnd()
-            try summaryFile.write(contentsOf: Data(ReportCSV.row(ReportCSV.summaryHeader).utf8))
-            try sampleFile.write(contentsOf: Data(ReportCSV.row(ReportCSV.sampleHeader).utf8))
+            let writer = try CSVReportWriter(directory: directory)
+            defer { writer.close() }
             for (index, session) in sessions.enumerated() {
-                try Task.checkCancellation()
-                try summaryFile.write(contentsOf: Data(ReportCSV.summary(session, generated: generated, appVersion: version, timezone: timezone).utf8))
-                for (sampleIndex, sample) in session.samples.enumerated() {
-                    if sampleIndex.isMultiple(of: 256) { try Task.checkCancellation() }
-                    try sampleFile.write(contentsOf: Data(ReportCSV.sample(sample, in: session).utf8))
-                }
+                try writer.append(session, generated: generated, version: version, timezone: timezone, lower: lower, upper: upper)
                 progress(Double(index + 1) / Double(sessions.count))
             }
-            return ReportFiles(directory: directory, urls: [summaries, samples])
+            try Task.checkCancellation()
+            return ReportFiles(directory: directory, urls: writer.urls)
         } catch { try? FileManager.default.removeItem(at: directory); throw error }
     }
+
+    /// Finished session files are immutable. Load one at a time and fail if the frozen selection changed.
+    static func generateCSV(_ snapshots: [ChargeSession], generated: Date, version: String, timezone: String,
+                            lower: Int, upper: Int, load: @Sendable (ChargeSession) async throws -> ChargeSession,
+                            progress: @Sendable (Double) -> Void) async throws -> ReportFiles {
+        guard !snapshots.isEmpty else {
+            throw NSError(domain: "MiniWattsPro.Report", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: String(localized: "No records to export")])
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MiniWattsPro-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        do {
+            try Task.checkCancellation()
+            let writer = try CSVReportWriter(directory: directory)
+            defer { writer.close() }
+            for (index, snapshot) in snapshots.enumerated() {
+                try Task.checkCancellation()
+                let record = try await load(snapshot)
+                guard record.id == snapshot.id, record.end == snapshot.end, record.lastObserved == snapshot.lastObserved,
+                      record.samples.count == (snapshot.samples.isEmpty ? snapshot.sampleCount : snapshot.samples.count) else {
+                    throw NSError(domain: "MiniWattsPro.Report", code: 2,
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Selected history changed. Retry export.")])
+                }
+                try writer.append(record, generated: generated, version: version, timezone: timezone, lower: lower, upper: upper)
+                progress(Double(index + 1) / Double(snapshots.count))
+            }
+            try Task.checkCancellation()
+            return ReportFiles(directory: directory, urls: writer.urls)
+        } catch { try? FileManager.default.removeItem(at: directory); throw error }
+    }
+}
+
+private nonisolated final class CSVReportWriter {
+    let urls: [URL]
+    private let summaryFile: FileHandle
+    private let sampleFile: FileHandle
+    init(directory: URL) throws {
+        let summaries = directory.appendingPathComponent("MiniWattsPro-sessions.csv")
+        let samples = directory.appendingPathComponent("MiniWattsPro-samples.csv")
+        try Data([0xEF, 0xBB, 0xBF]).write(to: summaries)
+        try Data([0xEF, 0xBB, 0xBF]).write(to: samples)
+        urls = [summaries, samples]
+        summaryFile = try FileHandle(forWritingTo: summaries)
+        sampleFile = try FileHandle(forWritingTo: samples)
+        try summaryFile.seekToEnd(); try sampleFile.seekToEnd()
+        try summaryFile.write(contentsOf: Data(ReportCSV.row(ReportCSV.localizedHeader(ReportCSV.summaryHeader)).utf8))
+        try sampleFile.write(contentsOf: Data(ReportCSV.row(ReportCSV.localizedHeader(ReportCSV.sampleHeader)).utf8))
+    }
+    func append(_ session: ChargeSession, generated: Date, version: String, timezone: String, lower: Int, upper: Int) throws {
+        try Task.checkCancellation()
+        try summaryFile.write(contentsOf: Data(ReportCSV.summary(session, generated: generated, appVersion: version,
+                                                                timezone: timezone, lower: lower, upper: upper).utf8))
+        for (index, sample) in session.samples.enumerated() {
+            if index.isMultiple(of: 256) { try Task.checkCancellation() }
+            try sampleFile.write(contentsOf: Data(ReportCSV.sample(sample, in: session).utf8))
+        }
+    }
+    func close() { try? summaryFile.close(); try? sampleFile.close() }
 }
 
 nonisolated enum PDFReport {
@@ -75,6 +121,7 @@ nonisolated enum PDFReport {
             page.line(text("Targets are used for estimates only. Remaining time uses observed percentage trends and comparable history; it is not a charging limit or a guaranteed completion time."))
             if single, let session = sessions.first {
                 page.line(text("Device model") + ": " + session.deviceModel + " · " + session.systemVersion)
+                page.line(session.isWireless ? text("Wireless") : text("Wired"))
                 page.line(session.levelDescription + " · " + text("Target") + ": \(session.targetPercent)%")
                 page.line(text("Started") + ": " + session.start.formatted(date: .numeric, time: .shortened))
                 page.line(text("Ended") + ": " + (session.end?.formatted(date: .numeric, time: .shortened) ?? "—"))
@@ -101,9 +148,19 @@ nonisolated enum PDFReport {
                     for (session, seconds) in ranked {
                         if Task.isCancelled { return }
                         page.line(session.start.formatted(date: .numeric, time: .shortened) + " · " + duration(seconds) + " · " + session.deviceModel)
+                        if let m = ChargeAnalysis.comparableMetrics(session, from: lower, to: upper) {
+                            page.line(text("Average in / cell") + ": " + amount(m.totals.averageInputWatts, "W") + " / " + amount(m.averageBatteryWatts, "W"))
+                            page.line(text("Recorded peak in / cell") + ": " + amount(m.peakInputWatts, "W") + " / " + amount(m.peakBatteryWatts, "W"))
+                            page.line(text("Delivered / stored") + ": " + amount(m.totals.measuredInputWattHours, "Wh") + " / " + amount(m.batteryWh, "Wh"))
+                            page.line(text("Cell share / load + loss") + ": " + amount(m.totals.chargePathEfficiencyPercent, "%") + " / " + amount(m.totals.unaccountedWattHours, "Wh"))
+                            page.line(text("Average / peak cell temp") + ": " + amount(m.averageTemperature, "°C") + " / " + amount(m.peakTemperature, "°C"))
+                            page.line(text("System thermal pressure") + ": " + duration(m.thermalPressureSeconds))
+                            page.line(text("Observation / input / battery coverage") + ": " + amount(m.coverage * 100, "%") + " / " + amount(m.totals.inputMeasuredSeconds / m.seconds * 100, "%") + " / " + amount(m.totals.batteryMeasuredSeconds / m.seconds * 100, "%"))
+                        }
                     }
                     page.line(text("Excluded records") + ": \(matching.count - ranked.count) · " + text("Incomplete range or insufficient coverage"))
                 }
+                page.line(text("Comparison values cover the selected charge interval. Recorded peaks and temperature use saved samples."))
                 page.line(text("Sessions"), size: 16, bold: true)
                 for (index, s) in summaries.enumerated() {
                     if Task.isCancelled { return }

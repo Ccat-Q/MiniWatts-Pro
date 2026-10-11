@@ -22,22 +22,25 @@ import UIKit
         let timezone = TimeZone.current.identifier
         task = Task {
             do {
-                var records: [ChargeSession] = []
-                for (index, summary) in sessions.enumerated() {
-                    try Task.checkCancellation()
-                    let loaded = summary.samples.isEmpty ? try await monitor.loadSession(summary.id) : summary
-                    records.append(loaded)
-                    progress = Double(index + 1) / Double(sessions.count) * 0.25
-                }
+                let captured: [ChargeSession]
+                if pdf && single, let summary = sessions.first {
+                    captured = [summary.samples.isEmpty ? try await monitor.loadSession(summary.id) : summary]
+                } else { captured = sessions }
                 try Task.checkCancellation()
-                let captured = records
                 let exportWorker = Task.detached(priority: .userInitiated) {
-                    try ReportGenerator.generate(captured, pdf: pdf, lower: lower, upper: upper, single: single,
-                                                 generated: generated, version: version, timezone: timezone) { value in
+                    let reportProgress: @Sendable (Double) -> Void = { value in
                         Task { @MainActor [weak self] in
-                            if self?.generation == token { self?.progress = 0.25 + value * 0.75 }
+                            if self?.generation == token { self?.progress = value }
                         }
                     }
+                    if pdf {
+                        return try ReportGenerator.generate(captured, pdf: true, lower: lower, upper: upper, single: single,
+                                                            generated: generated, version: version, timezone: timezone, progress: reportProgress)
+                    }
+                    return try await ReportGenerator.generateCSV(captured, generated: generated, version: version, timezone: timezone,
+                                                                 lower: lower, upper: upper, load: { summary in
+                        summary.samples.isEmpty ? try await monitor.loadSession(summary.id) : summary
+                    }, progress: reportProgress)
                 }
                 worker = exportWorker
                 let result = try await exportWorker.value
@@ -71,6 +74,7 @@ struct ReportExportButton: View {
     let isSingle: Bool
     @Environment(PowerMonitor.self) private var monitor
     @State private var export = ReportExportController()
+    @State private var lastWasPDF = true
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if export.running {
@@ -83,7 +87,10 @@ struct ReportExportButton: View {
                 } label: { Label("Export report", systemImage: "square.and.arrow.up") }
                     .disabled(sessions.isEmpty || !monitor.isLoaded)
             }
-            if let error = export.error { Text(verbatim: error).font(.caption).foregroundStyle(Color.mwDanger) }
+            if let error = export.error {
+                Text(verbatim: error).font(.caption).foregroundStyle(Color.mwDanger)
+                Button("Retry") { start(pdf: lastWasPDF) }
+            }
         }
         .sheet(item: $export.files, onDismiss: { export.clean() }) { files in
             ReportShareSheet(urls: files.urls) { export.clean() }
@@ -91,6 +98,7 @@ struct ReportExportButton: View {
         .onDisappear { export.cancel() }
     }
     private func start(pdf: Bool) {
+        lastWasPDF = pdf
         export.start(sessions: sessions, monitor: monitor, pdf: pdf, lower: lower, upper: upper, single: isSingle)
     }
 }

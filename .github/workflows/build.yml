@@ -87,6 +87,7 @@ jobs:
         run: ./scripts/build-ipa.sh
 
       - name: Test PDF and CSV exports in iOS simulator
+        timeout-minutes: 10
         run: bash scripts/test-reports.sh
 
       - name: Verify app and widget identity
@@ -117,6 +118,13 @@ jobs:
         with:
           name: MiniWattsPro-unsigned-ipa
           path: build/export/MiniWattsPro-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Upload report test fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-test-fixtures
+          path: build/report-fixtures
           if-no-files-found: error
 
       # Kept separately: the ipa is stripped, so a crash report needs this to

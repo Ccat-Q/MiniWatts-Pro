@@ -11,9 +11,17 @@ import PDFKit
                               adapterName: "Adapter, \"quoted\"", adapterRatedWatts: 30, isWireless: false)
         s.deviceModel = "iPhone-test"; s.systemVersion = "iOS-test"; s.endPercent = 100
         for offset in stride(from: 0, through: 4860, by: 5) {
+            var totals = EnergyTotals()
+            totals.integratedSeconds = Double(offset)
+            totals.batteryMeasuredSeconds = Double(offset)
+            totals.batteryWattHours = 8 * Double(offset) / 3600
+            totals.inputMeasuredSeconds = Double(offset)
+            totals.inputWattHours = 10 * Double(offset) / 3600
+            totals.pairedInputWattHours = totals.inputWattHours
+            totals.pairedBatteryWattHours = totals.batteryWattHours
             s.samples.append(ChargeSample(offset: Double(offset), inputWatts: offset == 300 ? nil : 10,
                 batteryWatts: 8, percent: 19 + offset / 60, batteryTemperature: 30, hottestTemperature: 35,
-                throttled: false, observedSeconds: Double(offset)))
+                throttled: false, observedSeconds: Double(offset), energyTotals: totals))
         }
         s.end = s.start.addingTimeInterval(4860); s.lastObserved = s.end!
         s.totals.integratedSeconds = s.duration
@@ -42,16 +50,32 @@ import PDFKit
         guard let rangePDF = PDFDocument(url: range.urls[0]) else { fatalError("Range PDF must be readable") }
         check(rangePDF.pageCount > 10, "Long range report must paginate")
         check((rangePDF.string ?? "").contains("945.0 Wh"), "Range aggregate must equal the sum of the selected records")
-        let csv = try ReportGenerator.generate([records[0]], pdf: false, lower: 20, upper: 80, single: true,
-                          generated: generated, version: "test-version", timezone: "UTC", progress: { _ in })
+        let selected = records[0]
+        let csv = try await ReportGenerator.generateCSV([selected.summary()], generated: generated,
+                          version: "test-version", timezone: "UTC", lower: 20, upper: 80,
+                          load: { _ in selected }, progress: { _ in })
         defer { try? FileManager.default.removeItem(at: csv.directory) }
         check(csv.urls.count == 2, "Export must create summary and sample CSV tables")
         let summary = try String(contentsOf: csv.urls[0], encoding: .utf8)
         let samples = try String(contentsOf: csv.urls[1], encoding: .utf8)
+        check(summary.contains(chinese ? "会话标识" : "session_id"), "CSV headers must follow the application language")
         check(summary.contains("\"13.5\",\"10.8\",\"80\""), "CSV totals must match PDF and analysis")
         check(summary.contains("Adapter, \"\"quoted\"\""), "Export must escape real adapter names")
         check(samples.components(separatedBy: "\r\n").count == records[0].samples.count + 2, "Every actual sample must be exported")
         check(samples.contains("\"300\",\"24\",\"\",\"8\""), "Missing input must stay empty in sample CSV")
+        do {
+            _ = try await ReportGenerator.generateCSV([records[1].summary()], generated: generated,
+                        version: "", timezone: "UTC", lower: 20, upper: 80, load: { _ in selected }, progress: { _ in })
+            fatalError("A changed selection must not silently export other data")
+        } catch { }
+        if let path = ProcessInfo.processInfo.environment["REPORT_TEST_OUTPUT"] {
+            let folder = URL(fileURLWithPath: path)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for (name, source) in [("single.pdf", single.urls[0]), ("range.pdf", range.urls[0]),
+                                   ("sessions.csv", csv.urls[0]), ("samples.csv", csv.urls[1])] {
+                try FileManager.default.copyItem(at: source, to: folder.appendingPathComponent(name))
+            }
+        }
         do {
             _ = try ReportGenerator.generate([], pdf: true, lower: 20, upper: 80, single: false,
                         generated: generated, version: "", timezone: "UTC", progress: { _ in })
@@ -67,6 +91,18 @@ import PDFKit
         catch is CancellationError { }
         let after = Set(try FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path))
         check(after.subtracting(before).filter { $0.hasPrefix("MiniWattsPro-") }.isEmpty, "Cancelled export must remove temporary files")
+        for pdf in [false, true] {
+            let duringWrite = Task.detached {
+                try ReportGenerator.generate(records, pdf: pdf, lower: 20, upper: 80, single: false,
+                            generated: generated, version: "", timezone: "UTC", progress: { _ in
+                                withUnsafeCurrentTask { $0?.cancel() }
+                            })
+            }
+            do { _ = try await duringWrite.value; fatalError("Cancellation while writing must be honored") }
+            catch is CancellationError { }
+        }
+        let final = Set(try FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path))
+        check(final.subtracting(before).filter { $0.hasPrefix("MiniWattsPro-") }.isEmpty, "Partial PDF and CSV files must be removed after cancellation")
         print("PDF pagination, \(chinese ? "Chinese" : "English") localization, CSV consistency, empty selection and cancellation passed")
     }
 }

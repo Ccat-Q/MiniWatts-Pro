@@ -12,6 +12,8 @@ nonisolated struct ChargeSample: Codable, Hashable, Identifiable, Sendable {
     var startsNewObservation: Bool = false
     /// Cumulative foreground observation time at this sample, independent of rail availability.
     var observedSeconds: TimeInterval = 0
+    var energyTotals: EnergyTotals?
+    var thermalPressureSeconds: TimeInterval = 0
     var id: TimeInterval { offset }
 }
 
@@ -21,6 +23,33 @@ nonisolated struct ChargeStep: Codable, Hashable, Sendable {
     let seconds: TimeInterval
     let run: Int
     let observedSeconds: TimeInterval
+    var metrics: ChargeRangeMetrics?
+}
+
+/// Measurements within complete percent boundaries; power/energy use cumulative live integration.
+nonisolated struct ChargeRangeMetrics: Codable, Hashable, Sendable {
+    var seconds: Double = 0
+    var totals = EnergyTotals()
+    var peakInputWatts: Double?
+    var peakBatteryWatts: Double?
+    var peakTemperature: Double?
+    var temperatureDegreeSeconds: Double = 0
+    var temperatureMeasuredSeconds: Double = 0
+    var thermalPressureSeconds: Double = 0
+    var averageBatteryWatts: Double? { totals.batteryMeasuredSeconds > 0 ? totals.batteryWattHours * 3600 / totals.batteryMeasuredSeconds : nil }
+    var batteryWh: Double? { totals.batteryMeasuredSeconds > 0 ? totals.batteryWattHours : nil }
+    var averageTemperature: Double? { temperatureMeasuredSeconds > 0 ? temperatureDegreeSeconds / temperatureMeasuredSeconds : nil }
+    var coverage: Double { seconds > 0 ? min(totals.integratedSeconds / seconds, 1) : 0 }
+    mutating func add(_ value: ChargeRangeMetrics) {
+        seconds += value.seconds
+        totals.add(value.totals)
+        peakInputWatts = [peakInputWatts, value.peakInputWatts].compactMap { $0 }.max()
+        peakBatteryWatts = [peakBatteryWatts, value.peakBatteryWatts].compactMap { $0 }.max()
+        peakTemperature = [peakTemperature, value.peakTemperature].compactMap { $0 }.max()
+        temperatureDegreeSeconds += value.temperatureDegreeSeconds
+        temperatureMeasuredSeconds += value.temperatureMeasuredSeconds
+        thermalPressureSeconds += value.thermalPressureSeconds
+    }
 }
 
 nonisolated struct ChargeSession: Codable, Identifiable, Hashable, Sendable {
@@ -47,7 +76,6 @@ nonisolated struct ChargeSession: Codable, Identifiable, Hashable, Sendable {
     var interrupted = false
     var sampleCount = 0
     var steps: [ChargeStep] = []
-    var previewPower: [Double] = []
     var temperatureDegreeSeconds: Double = 0
     var temperatureMeasuredSeconds: Double = 0
 
@@ -88,11 +116,6 @@ nonisolated struct ChargeSession: Codable, Identifiable, Hashable, Sendable {
         if !samples.isEmpty {
             value.sampleCount = samples.count
             value.steps = ChargeAnalysis.steps(samples)
-            let powers = samples.compactMap { $0.inputWatts ?? $0.batteryWatts }
-            let strideSize = max(1, Int(ceil(Double(powers.count) / 64)))
-            value.previewPower = stride(from: 0, to: powers.count, by: strideSize).compactMap {
-                powers[$0..<min($0 + strideSize, powers.count)].max()
-            }
             value.temperatureDegreeSeconds = 0
             value.temperatureMeasuredSeconds = 0
             for (a, b) in zip(samples, samples.dropFirst()) {

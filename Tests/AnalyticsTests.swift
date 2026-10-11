@@ -9,9 +9,19 @@ import Foundation
         var s = ChargeSession(start: start, startPercent: 19, adapterName: "Adapter, \"test\"\nline", adapterRatedWatts: 30, isWireless: wireless)
         s.deviceModel = "test"
         for offset in stride(from: 0, through: 81 * secondsPerPercent, by: 5) {
+            var totals = EnergyTotals()
+            totals.integratedSeconds = Double(offset)
+            totals.batteryMeasuredSeconds = Double(offset)
+            totals.batteryWattHours = 8 * Double(offset) / 3600
+            if !wireless {
+                totals.inputMeasuredSeconds = Double(offset)
+                totals.inputWattHours = 10 * Double(offset) / 3600
+                totals.pairedInputWattHours = totals.inputWattHours
+                totals.pairedBatteryWattHours = totals.batteryWattHours
+            }
             s.samples.append(ChargeSample(offset: Double(offset), inputWatts: wireless ? nil : 10, batteryWatts: 8,
                                           percent: min(100, 19 + offset / secondsPerPercent), batteryTemperature: 30,
-                                          hottestTemperature: 35, throttled: false, observedSeconds: Double(offset)))
+                                          hottestTemperature: 35, throttled: false, observedSeconds: Double(offset), energyTotals: totals))
         }
         s.end = start.addingTimeInterval(Double(81 * secondsPerPercent))
         s.lastObserved = s.end!
@@ -33,10 +43,29 @@ import Foundation
     static func main() async throws {
         let original = session(secondsPerPercent: 120)
         let summary = original.summary()
+        let day = Date(timeIntervalSince1970: 1_700_000_000)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        var recent = ChargeSession(start: day.addingTimeInterval(-6 * 86400), startPercent: 20,
+                                   adapterName: nil, adapterRatedWatts: nil, isWireless: false)
+        recent.end = day.addingTimeInterval(86400) // A selected session may finish outside the filter.
+        let old = ChargeSession(start: day.addingTimeInterval(-8 * 86400), startPercent: 20,
+                                adapterName: nil, adapterRatedWatts: nil, isWireless: false)
+        let selected = ChargeAnalysis.selectedSessions([recent, old], period: .week, now: day, from: day, to: day, calendar: calendar)
+        check(selected.map(\.id) == [recent.id] && selected[0].end == recent.end, "Date filters select whole finished sessions by start time")
+        let custom = ChargeAnalysis.selectedSessions([recent], period: .custom, now: day, from: recent.start,
+                                                      to: recent.start, calendar: calendar)
+        check(custom.count == 1, "Custom dates include the complete local calendar day")
         check(summary.samples.isEmpty && summary.sampleCount == original.samples.count, "Index must not carry full samples")
         check(ChargeAnalysis.duration(summary.steps, from: 20, to: 80) == 7200, "Comparable interval must use full percent boundaries")
         check(ChargeAnalysis.duration(summary.steps, from: 19, to: 80) == nil, "Initial partial percent cannot count")
         check(summary.averageBatteryTemperature == 30, "Time-weighted temperature")
+        let comparison = ChargeAnalysis.comparableMetrics(summary, from: 20, to: 80)!
+        check(abs(comparison.totals.inputWattHours - 20) < 0.000001 && abs(comparison.batteryWh! - 16) < 0.000001, "Comparison energy is bounded by the selected percentage interval")
+        check(abs(comparison.totals.averageInputWatts! - 10) < 0.000001 && abs(comparison.averageBatteryWatts! - 8) < 0.000001, "Comparison means use the corresponding measured duration")
+        check(comparison.averageTemperature == 30 && comparison.peakTemperature == 30 && comparison.coverage == 1, "Interval temperature and coverage use the same boundaries")
+        let wirelessComparison = ChargeAnalysis.comparableMetrics(session(wireless: true).summary(), from: 20, to: 80)!
+        check(wirelessComparison.totals.measuredInputWattHours == nil && wirelessComparison.totals.chargePathEfficiencyPercent == nil, "Wireless interval metrics preserve missing input")
         var gap = original
         gap.samples[24] = ChargeSample(offset: gap.samples[24].offset, inputWatts: nil, batteryWatts: nil,
                                       percent: nil, batteryTemperature: nil, hottestTemperature: nil, throttled: false,
@@ -50,6 +79,11 @@ import Foundation
         check(ChargeAnalysis.comparableSeconds(badTail, from: 20, to: 80) == 7200, "Gaps outside the selected interval cannot exclude a complete interval")
         let wireless = session(wireless: true).summary()
         check(wireless.totals.measuredInputWattHours == nil && wireless.totals.chargePathEfficiencyPercent == nil, "Wireless missing input")
+        var measuredZero = EnergyTotals()
+        measuredZero.inputMeasuredSeconds = 60
+        check(measuredZero.measuredInputWattHours == 0, "A measured zero is different from a missing reading")
+        measuredZero.pairedInputWattHours = 1
+        check(measuredZero.chargePathEfficiencyPercent == 0, "A real zero battery contribution is zero percent")
         var tiny = summary
         tiny.totals.pairedInputWattHours = 1; tiny.totals.pairedBatteryWattHours = 0.1
         var large = summary
