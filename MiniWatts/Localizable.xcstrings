@@ -4923,6 +4923,61 @@
           }
         }
       }
+    },
+    "For live readings over other apps, open the floating meter. Without it, background monitoring pauses; reopen MiniWatts Pro to resume." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要在其他应用上方持续更新时，请开启浮窗。未开启浮窗时，后台监测会暂停；重新打开 MiniWatts Pro 即可恢复。"
+          }
+        }
+      }
+    },
+    "Observed %lld of 2 charge-level increases" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已观察到 %lld／2 次电量上升"
+          }
+        }
+      }
+    },
+    "Continuous observation: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续观测：%@"
+          }
+        }
+      }
+    },
+    "Keep the app open or use the floating meter until the level rises twice. Background gaps restart the trend. Historical estimates need at least 3 comparable completed records for each segment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请保持应用在前台或使用浮窗，直到观察到两次电量上升。后台观测缺口会重建趋势；历史预测的每个分段需要至少 3 次可比的已结束记录。"
+          }
+        }
+      }
+    },
+    "Keep the app open or use the floating meter to rebuild a continuous charge trend." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请保持应用在前台或使用浮窗，以重新建立连续的充电趋势。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

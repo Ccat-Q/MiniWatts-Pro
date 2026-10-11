@@ -13,7 +13,8 @@
 | 日期筛选、加权汇总与同电量区间指标 | `ChargeAnalysis`、`ChargeRangeMetrics`、`SessionsView` |
 | 单次与日期范围报告 | `ReportGenerator`、`ReportCSV`、`ReportExportController` |
 | 瞬时／累计充电转换效率 | `ChargeEfficiency`、`PowerSnapshot`、`EnergyTotals`、`AnalysisTotals` |
-| 局部数字滚动、减少动态效果与滚动暂停 | `ReadoutTransition`、`ReadoutScrollMotion`、`Metric`、`PowerRing` |
+| 数字与圆弧局部动画、减少动态效果与滚动暂停 | `ReadoutTransition`、`ReadoutScrollMotion`、`Metric`、`PowerRing` |
+| 灵动岛暂停／恢复与本地发布限频 | `ChargeActivityController`、`LiveActivityUpdateGate`、`RootView`、`ChargeLiveActivity` |
 
 历史比较检查所选电量区间的覆盖率。能量和平均功率使用边界累计计量值，记录峰值和温度使用完整保存的样本；详情和报告明确这个口径。屏幕曲线抽点只减少绘图负担，保留观测断点与局部极值，不影响存储、计算或导出。
 
@@ -25,6 +26,8 @@
 
 - `Tests/AnalyticsTests.swift`：完整电量边界、90% 覆盖资格、区间外缺口、区间功率/能量/温度、能量加权、缺测与实测零值、日期筛选、历史与本次趋势、尾段减速、目标变化、暂停与观测中断。
 - 同一模型测试验证瞬时与累计转换效率、实测零值/净放电、低输入、非有限读数、100% 显示边界，以及同期能量和跨会话能量加权；报告测试检查中英文效率名称及同期计量说明。
+- 模型测试遍历全部 50%–100% 目标，检查积累进度、非法电量及未来观测；本地实时活动限频测试覆盖变化读数、心跳、暂停／恢复强制提交与系统时间变化。
+- `UITests/ChargingInteractionTests.swift` 在真实应用进程点击 80%／90%／100% 快捷按钮和 Stepper 加减控件，检查 50%／100% 边界、连续点击不崩溃、重启后保留目标及前后台往返。由 `scripts/test-interactions.sh` 在 Actions 运行，并保留 `.xcresult`、日志和截图；补充纯计算测试无法覆盖的 Observation setter 与 SwiftUI 绑定。
 - 同一模型测试验证超过 60 次会话与超过 1,500 点仍完整保存、未结束会话保护、强退恢复、索引重建、损坏会话隔离、写入失败及删除后延迟保存不会复活记录。
 - `Tests/ReportTests.swift` 与 `scripts/test-reports.sh`：在 iOS 模拟器运行真实 PDF/CSV 生成器，验证中英文、分页、统一汇总、完整采样行数、空范围、数据变化、生成前与生成中的取消、临时文件清理及页面渲染。
 - `scripts/verify-identity.py`：检查 IPA 内应用与小组件标识、显示名称、版本、iOS 17 部署目标和源配置共享组。
@@ -32,7 +35,7 @@
 
 每次开发分支推送均构建。交付时提供对应最终提交的成功运行链接；只有 `v*` 标签才发布 Release。
 
-产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
+产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`、`interaction-test-results`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
 
 ## 真机验收边界
 
@@ -43,3 +46,5 @@ Actions 成功证明源码可编译及合成数据规则通过，不证明私有
 3. 明暗外观、中文和大字体的布局、长历史滚动。
 4. 系统分享面板的保存/分享/取消，以及清理后当前充电继续记录。
 5. 每秒数字更新时的真机 CPU 与滚动流畅度；iOS 18+ 滚动阶段暂停、iOS 17 局部动画、减少动态效果、缺测恢复及大字体布局。
+
+用户报告环境为 iPhone 17 / iOS 27.0.1。Actions 使用 runner 提供的最新可用模拟器，不能替代该真机上的私有传感器、圆弧性能、PiP 保活及 ActivityKit 实际渲染验收。后台挂起时明确暂停，开启浮窗保持运行或返回前台后才恢复真实读数；不承诺后台持续执行。

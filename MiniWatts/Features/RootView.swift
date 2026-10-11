@@ -51,6 +51,7 @@ struct RootView: View {
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
+                liveActivity.resume()
                 monitor.start()
             case .background:
                 // Sensor reads are pointless while suspended, so the tick stops —
@@ -61,7 +62,7 @@ struct RootView: View {
                 // the sensors can still be read, the window keeps a live number on
                 // screen and the charge is recorded through a locked screen.
                 if !floatingMeter.isRunning {
-                    monitor.pause()
+                    pauseMonitoring()
                 }
                 // Last chance to leave the widget something fresh to fall back on.
                 widgets.flush(ChargeReading(monitor.snapshot), lastSession: monitor.sessions.first)
@@ -72,6 +73,22 @@ struct RootView: View {
                 break
             }
         }
+        .onChange(of: floatingMeter.isRunning) { _, running in
+            guard scenePhase == .background else { return }
+            if running {
+                liveActivity.resume()
+                monitor.start()
+            } else {
+                pauseMonitoring()
+            }
+        }
+    }
+
+    private func pauseMonitoring() {
+        monitor.pause()
+        liveActivity.pause(monitor.snapshot,
+                           selectedMetric: monitor.liveActivityMetric,
+                           enabled: monitor.showsLiveActivityWhileCharging)
     }
 }
 

@@ -311,7 +311,7 @@ says when its numbers were taken, and whether the extension read them or the app
 **The live activity is driven by the app alone.** No push updates: those need an APNs server
 and a certificate tied to a developer team, and a re-signed copy could never receive them.
 So `ChargeActivityController` starts an activity only while the app is in front; sends an
-update at most every 5 s and at least every 20 s; gives each update a stale date 45 s out, so
+update at most every 1 s for changed displayed readings and at least every 20 s; gives each update a stale date 45 s out, so
 a suspended app's last reading is shown as paused rather than as current; ends the activity
 two minutes after unplugging, or at once if the setting is turned off; and adopts an activity
 left over from a killed run instead of starting a second one. All of that needs the app to be
@@ -566,9 +566,10 @@ the heat map's 0.6 s animation, which was retriggered every second on a `blur` +
 
 MiniWatts Pro now restores digit rolling at the user's request. `ReadoutTransition`
 limits it to the displayed number and 0.18 seconds; no animation is attached to the
-dial's arcs. Reduce Motion and missing/non-numeric values use identity transitions.
+dial's entire view. The arcs now have their own 0.28-second progress animations,
+including initial presentation. Reduce Motion and missing/non-numeric values use identity transitions.
 `ReadoutScrollMotion` pauses them through dragging and deceleration on iOS 18+;
-iOS 17 retains only the local short transition. These safeguards have not been
+iOS 17 retains the local short transitions. These safeguards have not been
 profiled on a device, so the old measurements do not establish the new CPU cost.
 
 Deliberately kept despite the cost, as design decisions: the `Backdrop`'s full-screen
@@ -654,3 +655,20 @@ Charge comparison energy/mean power use differences between cumulative live tota
 at fully observed percent boundaries. `ChargeRangeMetrics` combines these percent
 steps for UI/PDF/CSV; recorded interval peaks and temperatures use saved samples.
 Date-range aggregates include all available measurements and show overall coverage.
+
+
+### Prediction and ActivityKit interaction regressions
+
+`PowerMonitor.chargeTarget` uses a tracked private backing field. Self-assignment
+inside an `@Observable` stored property's `didSet` re-enters the generated setter;
+it must not be used for clamping. Target changes update the current record and ETA
+immediately. Collecting predictions report continuous duration and observed
+increases; two rises, or sufficient history for every required segment, are still
+required. The model tests and application UI target both run only on Actions.
+
+`ChargeActivityController` serializes submissions and forces pause/resume through
+its one-second gate. `observationPaused` is optional for old activity decoding.
+Without PiP, backgrounding publishes paused content and stops sampling; compact
+and expanded presentations show a pause indicator / unavailable readings.
+Returning foreground forces the first fresh tick. PiP stopping in the background
+also stops sampling. A local Live Activity cannot keep a suspended app executing.

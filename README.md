@@ -84,7 +84,10 @@ Conversion efficiency shows the share of measured input reaching the cell: a liv
 power ratio and a cumulative ratio of energies measured over matching intervals.
 Phone load and conversion loss both affect it. Missing input remains unavailable.
 Changing readouts roll briefly; Reduce Motion disables this effect, and iOS 18+
-pauses it while the page scrolls.
+pauses it while the page scrolls. The dial arcs animate their measured progress
+independently. Live Activities refresh while the app runs; open the floating meter
+for monitoring over other apps. Otherwise backgrounding pauses the readings until
+the app returns.
 
 The Analysis tab offers an overview and records, 7/30/90-day and custom date filters,
 separate wired/wireless comparisons of the same percentage range, and coverage-aware

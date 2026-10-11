@@ -43,9 +43,15 @@ final class PowerMonitor {
     private(set) var historyBytes: Int64 = 0
     private(set) var chargeETA = ChargeETA(state: .unplugged)
     var chargeTarget: Int {
-        didSet {
-            chargeTarget = min(max(chargeTarget, 50), 100)
-            UserDefaults.standard.set(chargeTarget, forKey: "chargeTarget")
+        get { storedChargeTarget }
+        set {
+            let target = min(max(newValue, 50), 100)
+            guard storedChargeTarget != target else { return }
+            // @Observable turns stored-property observers into accessors. Writing
+            // chargeTarget from its own didSet recursively re-enters that setter.
+            storedChargeTarget = target
+            UserDefaults.standard.set(target, forKey: "chargeTarget")
+            currentSession?.targetPercent = target
             updateETA()
         }
     }
@@ -122,6 +128,7 @@ final class PowerMonitor {
     private let resistance = PathResistanceMeter()
     private let store = SessionStore()
     private let predictor = ChargePredictor()
+    private var storedChargeTarget: Int
     private var lastSessionObservation: Date?
     private var lastSessionPercent: Int?
     private var pendingObservationBreak = false
@@ -158,7 +165,7 @@ final class PowerMonitor {
     init() {
         let defaults = UserDefaults.standard
         let target = defaults.integer(forKey: "chargeTarget")
-        chargeTarget = (50...100).contains(target) ? target : 100
+        storedChargeTarget = (50...100).contains(target) ? target : 100
         let stored = defaults.double(forKey: Self.wattHoursKey)
         configuredBatteryWattHours = stored > 0 ? stored : 15.0
         // Defaults to on: recording a whole charge is the point of the History tab,
@@ -183,6 +190,7 @@ final class PowerMonitor {
             historyBytes = try await store.bytesUsed()
         } catch { historyError = error.localizedDescription }
         isLoaded = true
+        updateETA()
         collectDiagnostics()
     }
 

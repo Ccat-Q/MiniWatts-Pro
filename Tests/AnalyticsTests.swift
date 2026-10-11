@@ -41,6 +41,18 @@ import Foundation
         return s
     }
     static func main() async throws {
+        let activityTime = Date(timeIntervalSince1970: 5_000)
+        var activityGate = LiveActivityUpdateGate()
+        check(activityGate.shouldSend(at: activityTime, changed: false), "The first activity state is submitted")
+        check(!activityGate.shouldSend(at: activityTime.addingTimeInterval(0.5), changed: true), "Rapid sensor updates are coalesced")
+        check(activityGate.shouldSend(at: activityTime.addingTimeInterval(1), changed: true), "A changed displayed reading is submitted on the next one-second tick")
+        check(!activityGate.shouldSend(at: activityTime.addingTimeInterval(20), changed: false), "Unchanged readings do not waste the local update budget")
+        check(activityGate.shouldSend(at: activityTime.addingTimeInterval(21), changed: false), "A heartbeat keeps the stale date current")
+        check(activityGate.shouldSend(at: activityTime.addingTimeInterval(21), changed: true, force: true), "Background pause bypasses the interval gate")
+        check(activityGate.shouldSend(at: activityTime.addingTimeInterval(21.1), changed: true, force: true), "Foreground resume bypasses the interval gate")
+        check(activityGate.shouldSend(at: activityTime, changed: false), "Clock changes cannot suppress updates indefinitely")
+        activityGate.reset()
+        check(activityGate.shouldSend(at: activityTime, changed: false), "A new activity starts with a fresh update gate")
         check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: 15) == 75, "Instantaneous efficiency uses measured power")
         check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: 0) == 0, "Measured zero cell power is zero efficiency")
         check(ChargeEfficiency.instantaneous(inputWatts: 20, batteryWatts: -2) == 0, "Battery discharge has no incoming charging contribution")
@@ -113,6 +125,9 @@ import Foundation
         let predictor = ChargePredictor()
         let time = Date(timeIntervalSince1970: 20_000)
         predictor.observe(date: time, percent: 50, connected: true, charging: true)
+        let coldStart = predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
+                                            model: "test", history: [], now: time)
+        check(coldStart.state == .collecting && coldStart.observedIncreases == 0, "A new session explains the missing trend")
         let histories = [summary, session(secondsPerPercent: 120).summary(), session(secondsPerPercent: 120).summary()]
         check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
                                  model: "test", history: histories, now: time).seconds == 6000, "Historical taper segments")
@@ -126,12 +141,29 @@ import Foundation
         check(predictor.estimate(percent: 50, target: 100, connected: true, charging: true, wireless: false,
                                  model: "test", history: histories, now: time).state == .interrupted, "No stale countdown")
         predictor.reset()
-        for offset in 0...120 {
+        for offset in 0...119 {
             predictor.observe(date: time.addingTimeInterval(Double(offset)), percent: 50 + offset / 60, connected: true, charging: true)
         }
+        let partialTrend = predictor.estimate(percent: 51, target: 80, connected: true, charging: true, wireless: false,
+                                               model: "test", history: [], now: time.addingTimeInterval(119))
+        check(partialTrend.state == .collecting && partialTrend.observedIncreases == 1 && partialTrend.observationSeconds == 119,
+              "One level increase reports progress without inventing a countdown")
+        predictor.observe(date: time.addingTimeInterval(120), percent: 52, connected: true, charging: true)
         let trend = predictor.estimate(percent: 52, target: 80, connected: true, charging: true, wireless: false,
                                        model: "test", history: [], now: time.addingTimeInterval(120))
         check(trend.source == .trend && trend.seconds == 1680, "Two percentage changes provide a current trend")
+        for target in 50...100 {
+            let result = predictor.estimate(percent: 52, target: target, connected: true, charging: true,
+                                            wireless: false, model: "test", history: [], now: time.addingTimeInterval(120))
+            check(target <= 52 ? result.state == .reached : result.seconds == Double(target - 52) * 60,
+                  "Every selectable prediction target must return a valid state")
+        }
+        check(predictor.estimate(percent: 101, target: 100, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(120)).state == .noReading, "Invalid percentages are not usable readings")
+        check(predictor.estimate(percent: 52, target: 101, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(120)).seconds == 2880, "An out-of-range target is bounded at full charge")
+        check(predictor.estimate(percent: 52, target: 80, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(119)).state == .interrupted, "A future observation cannot produce a current countdown")
         check(predictor.estimate(percent: 52, target: 90, connected: true, charging: true, wireless: false,
                                  model: "test", history: [], now: time.addingTimeInterval(120)).seconds == 2280, "Changing the target immediately recomputes ETA")
         let taper = histories.map { session in

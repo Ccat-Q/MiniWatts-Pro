@@ -13,6 +13,7 @@ struct ChargeLiveActivity: Widget {
             // The Dynamic Island is always dark.
             let palette = WidgetPalette(.dark)
             let state = context.state
+            let paused = context.isStale || state.isPaused
             let reading = state.reading
             let tint = palette.tint(for: state)
             return DynamicIsland {
@@ -40,12 +41,12 @@ struct ChargeLiveActivity: Widget {
                     PrimaryMetricView(state: state,
                                       palette: palette,
                                       size: 28,
-                                      isStale: context.isStale,
+                                      isStale: paused,
                                       inlineCaption: false)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(spacing: 6) {
-                        SecondaryMetrics(state: state, palette: palette)
+                        SecondaryMetrics(state: state, palette: palette, paused: paused)
                         LevelBar(percent: reading.percent,
                                  tint: palette.tint(for: reading),
                                  track: palette.track,
@@ -56,14 +57,14 @@ struct ChargeLiveActivity: Widget {
                     .padding(.horizontal, Self.islandInset)
                 }
             } compactLeading: {
-                Image(systemName: symbol(for: state.selectedMetric))
-                    .foregroundStyle(context.isStale ? palette.muted : tint)
+                Image(systemName: paused ? "pause.circle" : symbol(for: state.selectedMetric))
+                    .foregroundStyle(paused ? palette.muted : tint)
             } compactTrailing: {
-                CompactMetricValue(state: state)
-                    .foregroundStyle(context.isStale ? palette.muted : tint)
+                CompactMetricValue(state: state, paused: paused)
+                    .foregroundStyle(paused ? palette.muted : tint)
             } minimal: {
-                Image(systemName: symbol(for: state.selectedMetric))
-                    .foregroundStyle(context.isStale ? palette.muted : tint)
+                Image(systemName: paused ? "pause.circle" : symbol(for: state.selectedMetric))
+                    .foregroundStyle(paused ? palette.muted : tint)
             }
             .keylineTint(tint)
         }
@@ -77,6 +78,7 @@ struct ChargeActivityLockScreenView: View {
     var body: some View {
         let palette = WidgetPalette(scheme)
         let state = context.state
+        let paused = context.isStale || state.isPaused
         let reading = state.reading
         // The Lock Screen gives an activity about 160 pt of height. Everything here has
         // to fit inside it, padding included, or the system clips the top and bottom.
@@ -85,14 +87,14 @@ struct ChargeActivityLockScreenView: View {
                 PrimaryMetricView(state: state,
                                   palette: palette,
                                   size: 34,
-                                  isStale: context.isStale)
+                                  isStale: paused)
                 Spacer(minLength: 8)
                 Text(verbatim: reading.percentText)
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .monospacedDigit()
             }
-            SecondaryMetrics(state: state, palette: palette)
-                .opacity(context.isStale ? 0.55 : 1)
+            SecondaryMetrics(state: state, palette: palette, paused: paused)
+                .opacity(paused ? 0.55 : 1)
             LevelBar(percent: reading.percent,
                      tint: palette.tint(for: reading),
                      track: palette.track,
@@ -122,7 +124,7 @@ private struct PrimaryMetricView: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Image(systemName: symbol(for: state.selectedMetric))
                     .font(.system(size: size * 0.5, weight: .bold))
-                Text(verbatim: numericValue(for: state.selectedMetric, state: state)
+                Text(verbatim: isStale ? "—" : numericValue(for: state.selectedMetric, state: state)
                     .map(oneDecimal) ?? "—")
                     .font(.system(size: size, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -142,8 +144,8 @@ private struct PrimaryMetricView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label(for: state.selectedMetric))
-        .accessibilityValue(Text(verbatim: formattedValue(for: state.selectedMetric,
-                                                          state: state)))
+        .accessibilityValue(isStale ? Text("Paused — open MiniWatts Pro to resume")
+                            : Text(verbatim: formattedValue(for: state.selectedMetric, state: state)))
         .accessibilityAddTraits(.updatesFrequently)
     }
 
@@ -173,6 +175,7 @@ private struct PrimaryMetricView: View {
 private struct SecondaryMetrics: View {
     let state: ChargeActivityContentState
     let palette: WidgetPalette
+    var paused = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -183,7 +186,7 @@ private struct SecondaryMetrics: View {
                         .foregroundStyle(metricTint(metric, state: state, palette: palette))
                     Text(shortLabel(for: metric))
                         .foregroundStyle(palette.muted)
-                    Text(verbatim: shortValue(for: metric, state: state))
+                    Text(verbatim: paused ? "—" : shortValue(for: metric, state: state))
                         .monospacedDigit()
                 }
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -192,7 +195,8 @@ private struct SecondaryMetrics: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(label(for: metric))
-                .accessibilityValue(Text(verbatim: formattedValue(for: metric, state: state)))
+                .accessibilityValue(paused ? Text("Paused — open MiniWatts Pro to resume")
+                                    : Text(verbatim: formattedValue(for: metric, state: state)))
             }
         }
     }
@@ -200,11 +204,13 @@ private struct SecondaryMetrics: View {
 
 private struct CompactMetricValue: View {
     let state: ChargeActivityContentState
+    var paused = false
 
     var body: some View {
-        Text(verbatim: shortValue(for: state.selectedMetric, state: state))
+        Text(verbatim: paused ? "—" : shortValue(for: state.selectedMetric, state: state))
             .font(.system(size: 14, weight: .semibold, design: .rounded))
             .monospacedDigit()
+            .accessibilityLabel(paused ? Text("Paused — open MiniWatts Pro to resume") : Text(label(for: state.selectedMetric)))
     }
 }
 
@@ -216,8 +222,9 @@ struct ActivityFootnote: View {
     var showsStatus = true
 
     var body: some View {
+        let paused = context.isStale || context.state.isPaused
         HStack(spacing: 6) {
-            if context.isStale {
+            if paused {
                 Label("Paused — open MiniWatts Pro to resume", systemImage: "pause.circle")
                     .foregroundStyle(palette.loss)
             } else if showsStatus {
@@ -226,7 +233,7 @@ struct ActivityFootnote: View {
             Spacer(minLength: 6)
             // Dropped while paused: the line is too narrow for both, and the pause
             // message was the one being cut short.
-            if !context.isStale {
+            if !paused {
                 Text("Since \(Text(context.attributes.startedAt, style: .time))")
             }
             // The one way to close the activity while MiniWatts is suspended or killed:

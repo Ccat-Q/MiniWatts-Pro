@@ -159,16 +159,20 @@ nonisolated struct ChargeETA: Equatable, Sendable {
     var seconds: Double?
     var source: Source?
     var historyCount: Int = 0
+    var observedIncreases: Int = 0
+    var observationSeconds: TimeInterval = 0
 }
 
 nonisolated final class ChargePredictor {
     private var previous: (date: Date, percent: Int)?
     private var changes: [(date: Date, percent: Int)] = []
+    private var observationStart: Date?
     private(set) var interrupted = false
 
     func reset(interrupted: Bool = false) {
         previous = nil
         changes = []
+        observationStart = nil
         self.interrupted = interrupted
     }
 
@@ -185,17 +189,21 @@ nonisolated final class ChargePredictor {
             }
         }
         previous = (date, percent)
+        if observationStart == nil { observationStart = date }
     }
 
     func estimate(percent: Int?, target: Int, connected: Bool, charging: Bool,
                   wireless: Bool, model: String, history: [ChargeSession], now: Date) -> ChargeETA {
         guard connected else { return ChargeETA(state: .unplugged) }
-        guard let percent else { return ChargeETA(state: .noReading) }
+        guard let percent, (0...100).contains(percent) else { return ChargeETA(state: .noReading) }
+        let target = min(max(target, 50), 100)
         if percent >= target { return ChargeETA(state: .reached, seconds: 0) }
         guard charging else { return ChargeETA(state: .paused) }
-        guard let last = previous, now.timeIntervalSince(last.date) <= 10, !interrupted else {
+        guard let last = previous, (0...10).contains(now.timeIntervalSince(last.date)), !interrupted else {
             return ChargeETA(state: .interrupted)
         }
+        let collecting = ChargeETA(state: .collecting, observedIncreases: changes.count,
+                                   observationSeconds: max(0, now.timeIntervalSince(observationStart ?? now)))
         var rate: Double?
         if changes.count >= 2, let first = changes.first, let last = changes.last, last.percent > first.percent {
             rate = last.date.timeIntervalSince(first.date) / Double(last.percent - first.percent)
@@ -216,10 +224,10 @@ nonisolated final class ChargePredictor {
                 historical = true; historyCount = min(historyCount, values.count)
             } else if let rate {
                 seconds += Double(upper - cursor) * rate; trend = true
-            } else { return ChargeETA(state: .collecting) }
+            } else { return collecting }
             cursor = upper
         }
-        guard seconds.isFinite, seconds > 0 else { return ChargeETA(state: .collecting) }
+        guard seconds.isFinite, seconds > 0 else { return collecting }
         return ChargeETA(state: .estimating, seconds: seconds,
                          source: historical ? (trend ? .hybrid : .history) : .trend,
                          historyCount: historical ? historyCount : 0)
