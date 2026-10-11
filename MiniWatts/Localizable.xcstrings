@@ -3740,282 +3740,7 @@
         }
       }
     },
-    "session_id" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "会话标识"
-          }
-        }
-      }
-    },
-    "start_utc" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始时间（UTC）"
-          }
-        }
-      }
-    },
-    "end_utc" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "结束时间（UTC）"
-          }
-        }
-      }
-    },
-    "device_model" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设备型号"
-          }
-        }
-      }
-    },
-    "system_version" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统版本"
-          }
-        }
-      }
-    },
-    "target_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标电量（%）"
-          }
-        }
-      }
-    },
-    "start_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "起始电量（%）"
-          }
-        }
-      }
-    },
-    "end_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "结束电量（%）"
-          }
-        }
-      }
-    },
-    "wireless" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无线充电"
-          }
-        }
-      }
-    },
-    "duration_seconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记录时长（秒）"
-          }
-        }
-      }
-    },
-    "observation_coverage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "观测覆盖率（0–1）"
-          }
-        }
-      }
-    },
-    "input_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入能量（Wh）"
-          }
-        }
-      }
-    },
-    "battery_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "入电芯能量（Wh）"
-          }
-        }
-      }
-    },
-    "cell_share_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯占比（%）"
-          }
-        }
-      }
-    },
-    "load_and_loss_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "负载与转换损耗（Wh）"
-          }
-        }
-      }
-    },
-    "average_input_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平均输入功率（W）"
-          }
-        }
-      }
-    },
-    "average_battery_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平均电芯功率（W）"
-          }
-        }
-      }
-    },
-    "peak_input_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "峰值输入功率（W）"
-          }
-        }
-      }
-    },
-    "peak_battery_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "峰值电芯功率（W）"
-          }
-        }
-      }
-    },
-    "peak_battery_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最高电芯温度（°C）"
-          }
-        }
-      }
-    },
-    "average_battery_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平均电芯温度（°C）"
-          }
-        }
-      }
-    },
-    "thermal_pressure_seconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统热压力时长（秒）"
-          }
-        }
-      }
-    },
-    "sample_count" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "采样点数"
-          }
-        }
-      }
-    },
-    "interrupted" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记录中断"
-          }
-        }
-      }
-    },
-    "adapter" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "适配器名称"
-          }
-        }
-      }
-    },
-    "input_measured_seconds" : {
+    "csv.input_measured_seconds" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4023,131 +3748,33 @@
             "state" : "translated",
             "value" : "输入测量时长（秒）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "input_measured_seconds"
+          }
         }
       }
     },
-    "battery_measured_seconds" : {
+    "csv.wireless" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "电芯测量时长（秒）"
+            "value" : "无线充电"
           }
-        }
-      }
-    },
-    "paired_input_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
+        },
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步输入能量（Wh）"
+            "value" : "wireless"
           }
         }
       }
     },
-    "paired_battery_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同步入电芯能量（Wh）"
-          }
-        }
-      }
-    },
-    "generated_utc" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导出时间（UTC）"
-          }
-        }
-      }
-    },
-    "app_version" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用版本"
-          }
-        }
-      }
-    },
-    "display_timezone" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示时区"
-          }
-        }
-      }
-    },
-    "comparison_from_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "比较起始电量（%）"
-          }
-        }
-      }
-    },
-    "comparison_to_percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "比较目标电量（%）"
-          }
-        }
-      }
-    },
-    "comparison_seconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间用时（秒）"
-          }
-        }
-      }
-    },
-    "comparison_input_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间输入能量（Wh）"
-          }
-        }
-      }
-    },
-    "comparison_battery_Wh" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间入电芯能量（Wh）"
-          }
-        }
-      }
-    },
-    "comparison_cell_share_percent" : {
+    "csv.comparison_cell_share_percent" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4155,109 +3782,33 @@
             "state" : "translated",
             "value" : "区间电芯占比（%）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_cell_share_percent"
+          }
         }
       }
     },
-    "comparison_load_and_loss_Wh" : {
+    "csv.battery_Wh" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区间负载与转换损耗（Wh）"
+            "value" : "入电芯能量（Wh）"
           }
-        }
-      }
-    },
-    "comparison_average_input_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
+        },
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区间平均输入功率（W）"
+            "value" : "battery_Wh"
           }
         }
       }
     },
-    "comparison_average_battery_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间平均电芯功率（W）"
-          }
-        }
-      }
-    },
-    "comparison_recorded_peak_input_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间记录峰值输入功率（W）"
-          }
-        }
-      }
-    },
-    "comparison_recorded_peak_battery_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间记录峰值电芯功率（W）"
-          }
-        }
-      }
-    },
-    "comparison_average_battery_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间平均电芯温度（°C）"
-          }
-        }
-      }
-    },
-    "comparison_peak_battery_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间最高电芯温度（°C）"
-          }
-        }
-      }
-    },
-    "comparison_thermal_pressure_seconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间系统热压力时长（秒）"
-          }
-        }
-      }
-    },
-    "comparison_observation_coverage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "区间观测覆盖率（0–1）"
-          }
-        }
-      }
-    },
-    "comparison_input_measured_seconds" : {
+    "csv.comparison_input_measured_seconds" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4265,120 +3816,50 @@
             "state" : "translated",
             "value" : "区间输入测量时长（秒）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_input_measured_seconds"
+          }
         }
       }
     },
-    "comparison_battery_measured_seconds" : {
+    "csv.comparison_input_Wh" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区间电芯测量时长（秒）"
+            "value" : "区间输入能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_input_Wh"
           }
         }
       }
     },
-    "sample_utc" : {
+    "csv.average_battery_C" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "采样时间（UTC）"
+            "value" : "平均电芯温度（°C）"
           }
-        }
-      }
-    },
-    "offset_seconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
+        },
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "经过时长（秒）"
+            "value" : "average_battery_C"
           }
         }
       }
     },
-    "percent" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电量（%）"
-          }
-        }
-      }
-    },
-    "input_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入功率（W）"
-          }
-        }
-      }
-    },
-    "battery_W" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯功率（W）"
-          }
-        }
-      }
-    },
-    "battery_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电芯温度（°C）"
-          }
-        }
-      }
-    },
-    "hottest_C" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最高传感器温度（°C）"
-          }
-        }
-      }
-    },
-    "system_thermal_pressure" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统热压力"
-          }
-        }
-      }
-    },
-    "is_charging" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在充电"
-          }
-        }
-      }
-    },
-    "observation_break" : {
+    "csv.observation_break" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4386,21 +3867,186 @@
             "state" : "translated",
             "value" : "观测断点"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "observation_break"
+          }
         }
       }
     },
-    "observed_seconds" : {
+    "csv.sample_count" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "累计观测时长（秒）"
+            "value" : "采样点数"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sample_count"
           }
         }
       }
     },
-    "cumulative_input_Wh" : {
+    "csv.comparison_peak_battery_C" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间最高电芯温度（°C）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_peak_battery_C"
+          }
+        }
+      }
+    },
+    "csv.end_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "end_percent"
+          }
+        }
+      }
+    },
+    "csv.percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "percent"
+          }
+        }
+      }
+    },
+    "csv.app_version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用版本"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "app_version"
+          }
+        }
+      }
+    },
+    "csv.input_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "input_W"
+          }
+        }
+      }
+    },
+    "csv.comparison_battery_measured_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间电芯测量时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_battery_measured_seconds"
+          }
+        }
+      }
+    },
+    "csv.target_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "target_percent"
+          }
+        }
+      }
+    },
+    "csv.comparison_observation_coverage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间观测覆盖率（0–1）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_observation_coverage"
+          }
+        }
+      }
+    },
+    "csv.session_id" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会话标识"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "session_id"
+          }
+        }
+      }
+    },
+    "csv.cumulative_input_Wh" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4408,21 +4054,67 @@
             "state" : "translated",
             "value" : "累计输入能量（Wh）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_input_Wh"
+          }
         }
       }
     },
-    "cumulative_battery_Wh" : {
+    "csv.battery_C" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "累计入电芯能量（Wh）"
+            "value" : "电芯温度（°C）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "battery_C"
           }
         }
       }
     },
-    "cumulative_input_measured_seconds" : {
+    "csv.peak_battery_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "峰值电芯功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "peak_battery_W"
+          }
+        }
+      }
+    },
+    "csv.observation_coverage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "观测覆盖率（0–1）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "observation_coverage"
+          }
+        }
+      }
+    },
+    "csv.cumulative_input_measured_seconds" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4430,32 +4122,169 @@
             "state" : "translated",
             "value" : "累计输入测量时长（秒）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_input_measured_seconds"
+          }
         }
       }
     },
-    "cumulative_battery_measured_seconds" : {
+    "csv.peak_input_W" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "累计电芯测量时长（秒）"
+            "value" : "峰值输入功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "peak_input_W"
           }
         }
       }
     },
-    "cumulative_paired_input_Wh" : {
+    "csv.interrupted" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "累计同步输入能量（Wh）"
+            "value" : "记录中断"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "interrupted"
           }
         }
       }
     },
-    "cumulative_paired_battery_Wh" : {
+    "csv.input_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "input_Wh"
+          }
+        }
+      }
+    },
+    "csv.device_model" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设备型号"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "device_model"
+          }
+        }
+      }
+    },
+    "csv.paired_input_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步输入能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "paired_input_Wh"
+          }
+        }
+      }
+    },
+    "csv.end_utc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束时间（UTC）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "end_utc"
+          }
+        }
+      }
+    },
+    "csv.battery_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电芯功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "battery_W"
+          }
+        }
+      }
+    },
+    "csv.is_charging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在充电"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "is_charging"
+          }
+        }
+      }
+    },
+    "csv.cell_share_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电芯占比（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cell_share_percent"
+          }
+        }
+      }
+    },
+    "csv.cumulative_paired_battery_Wh" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -4463,16 +4292,589 @@
             "state" : "translated",
             "value" : "累计同步入电芯能量（Wh）"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_paired_battery_Wh"
+          }
         }
       }
     },
-    "cumulative_thermal_pressure_seconds" : {
+    "csv.observed_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计观测时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "observed_seconds"
+          }
+        }
+      }
+    },
+    "csv.adapter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适配器名称"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "adapter"
+          }
+        }
+      }
+    },
+    "csv.comparison_average_battery_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间平均电芯功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_average_battery_W"
+          }
+        }
+      }
+    },
+    "csv.load_and_loss_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "负载与转换损耗（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "load_and_loss_Wh"
+          }
+        }
+      }
+    },
+    "csv.comparison_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间用时（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_seconds"
+          }
+        }
+      }
+    },
+    "csv.comparison_recorded_peak_battery_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间记录峰值电芯功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_recorded_peak_battery_W"
+          }
+        }
+      }
+    },
+    "csv.duration_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "duration_seconds"
+          }
+        }
+      }
+    },
+    "csv.average_input_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平均输入功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average_input_W"
+          }
+        }
+      }
+    },
+    "csv.cumulative_battery_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计入电芯能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_battery_Wh"
+          }
+        }
+      }
+    },
+    "csv.cumulative_paired_input_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计同步输入能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_paired_input_Wh"
+          }
+        }
+      }
+    },
+    "csv.cumulative_thermal_pressure_seconds" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "累计系统热压力时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_thermal_pressure_seconds"
+          }
+        }
+      }
+    },
+    "csv.peak_battery_C" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最高电芯温度（°C）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "peak_battery_C"
+          }
+        }
+      }
+    },
+    "csv.average_battery_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平均电芯功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average_battery_W"
+          }
+        }
+      }
+    },
+    "csv.display_timezone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示时区"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "display_timezone"
+          }
+        }
+      }
+    },
+    "csv.sample_utc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采样时间（UTC）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sample_utc"
+          }
+        }
+      }
+    },
+    "csv.system_version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统版本"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "system_version"
+          }
+        }
+      }
+    },
+    "csv.comparison_recorded_peak_input_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间记录峰值输入功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_recorded_peak_input_W"
+          }
+        }
+      }
+    },
+    "csv.thermal_pressure_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "thermal_pressure_seconds"
+          }
+        }
+      }
+    },
+    "csv.battery_measured_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电芯测量时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "battery_measured_seconds"
+          }
+        }
+      }
+    },
+    "csv.paired_battery_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步入电芯能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "paired_battery_Wh"
+          }
+        }
+      }
+    },
+    "csv.cumulative_battery_measured_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计电芯测量时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cumulative_battery_measured_seconds"
+          }
+        }
+      }
+    },
+    "csv.comparison_from_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "比较起始电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_from_percent"
+          }
+        }
+      }
+    },
+    "csv.start_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起始电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "start_percent"
+          }
+        }
+      }
+    },
+    "csv.offset_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "经过时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "offset_seconds"
+          }
+        }
+      }
+    },
+    "csv.comparison_average_battery_C" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间平均电芯温度（°C）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_average_battery_C"
+          }
+        }
+      }
+    },
+    "csv.start_utc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始时间（UTC）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "start_utc"
+          }
+        }
+      }
+    },
+    "csv.system_thermal_pressure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统热压力"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "system_thermal_pressure"
+          }
+        }
+      }
+    },
+    "csv.comparison_battery_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间入电芯能量（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_battery_Wh"
+          }
+        }
+      }
+    },
+    "csv.hottest_C" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最高传感器温度（°C）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hottest_C"
+          }
+        }
+      }
+    },
+    "csv.comparison_average_input_W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间平均输入功率（W）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_average_input_W"
+          }
+        }
+      }
+    },
+    "csv.comparison_to_percent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "比较目标电量（%）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_to_percent"
+          }
+        }
+      }
+    },
+    "csv.comparison_thermal_pressure_seconds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间系统热压力时长（秒）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_thermal_pressure_seconds"
+          }
+        }
+      }
+    },
+    "csv.comparison_load_and_loss_Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区间负载与转换损耗（Wh）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comparison_load_and_loss_Wh"
+          }
+        }
+      }
+    },
+    "csv.generated_utc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出时间（UTC）"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "generated_utc"
           }
         }
       }

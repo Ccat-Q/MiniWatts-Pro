@@ -1,5 +1,6 @@
 import Foundation
 import PDFKit
+import UIKit
 
 /// Runs against the real UIKit report renderer in an iOS simulator on Actions.
 @main struct ReportTests {
@@ -31,7 +32,7 @@ import PDFKit
         s.peakInputWatts = 10; s.peakBatteryWatts = 8; s.peakBatteryTemperature = 30
         return s
     }
-    static func main() async throws {
+    @MainActor static func main() async throws {
         let chinese = CommandLine.arguments.contains("--chinese")
         let records = (0..<70).map { _ in session() }
         let generated = Date(timeIntervalSince1970: 10_000)
@@ -75,6 +76,16 @@ import PDFKit
                                    ("sessions.csv", csv.urls[0]), ("samples.csv", csv.urls[1])] {
                 try FileManager.default.copyItem(at: source, to: folder.appendingPathComponent(name))
             }
+            for index in 0..<min(pdf.pageCount, 2) {
+                guard let page = pdf.page(at: index), let data = page.thumbnail(of: CGSize(width: 595, height: 842), for: .mediaBox).pngData() else {
+                    fatalError("PDF pages must render")
+                }
+                try data.write(to: folder.appendingPathComponent("single-page-\(index + 1).png"))
+            }
+            guard let page = rangePDF.page(at: 0), let data = page.thumbnail(of: CGSize(width: 595, height: 842), for: .mediaBox).pngData() else {
+                fatalError("Range PDF must render")
+            }
+            try data.write(to: folder.appendingPathComponent("range-page-1.png"))
         }
         do {
             _ = try ReportGenerator.generate([], pdf: true, lower: 20, upper: 80, single: false,
