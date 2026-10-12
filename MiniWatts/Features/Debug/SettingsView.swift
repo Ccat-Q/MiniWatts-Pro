@@ -53,7 +53,7 @@ struct SettingsView: View {
                         .font(.system(size: 14, weight: .medium))
                 }
                 .tint(.mwAccent)
-                Text("Sensors can only be read while MiniWatts is on screen, so a charge is only recorded for as long as the phone stays awake. With this on, the screen is held on — but only while a charger is connected, never on battery.")
+                Text("Sensors can only be read while MiniWatts Pro is on screen, so a charge is only recorded for as long as the phone stays awake. With this on, the screen is held on — but only while a charger is connected, never on battery.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -93,11 +93,15 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("The activity starts while a charger is connected and MiniWatts is in front, refreshes while MiniWatts runs, and marks the reading paused once the app is suspended. Unplug with MiniWatts running and it ends two minutes later; unplug while it is suspended and it stays until MiniWatts runs again. Tap End on the activity to close it at any time.")
+                Text("For live readings over other apps, open the floating meter. Without it, background monitoring pauses; reopen MiniWatts Pro to resume.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Widgets read the sensors themselves whenever iOS refreshes them — usually every 15 to 60 minutes — and straight away when you plug in or unplug with MiniWatts open. Each one says when its numbers were taken.")
+                Text("The activity starts while a charger is connected and MiniWatts Pro is in front, refreshes while MiniWatts Pro runs, and marks the reading paused once the app is suspended. Unplug with MiniWatts Pro running and it ends two minutes later; unplug while it is suspended and it stays until MiniWatts Pro runs again. Tap End on the activity to close it at any time.")
+                    .font(.caption)
+                    .foregroundStyle(Color.mwMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Widgets read the sensors themselves whenever iOS refreshes them — usually every 15 to 60 minutes — and straight away when you plug in or unplug with MiniWatts Pro open. Each one says when its numbers were taken.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -164,7 +168,7 @@ struct SettingsView: View {
                     EmptyNote(text: "This device does not support Picture in Picture.")
                 default:
                     if floatingMeter.status == .notReady {
-                        EmptyNote(text: "iOS will not open the window yet. Leave MiniWatts on screen for a moment and try again.",
+                        EmptyNote(text: "iOS will not open the window yet. Leave MiniWatts Pro on screen for a moment and try again.",
                                   systemImage: "clock")
                     }
                     Button {
@@ -193,7 +197,7 @@ struct SettingsView: View {
                               || (!floatingMeter.isRunning && !floatingMeter.hasSelectedContent))
                 }
 
-                Text("Puts the reading in a floating window that stays on top of other apps and keeps updating once a second. It is the only place iOS lets an app keep a number moving while it is off screen: a widget is refreshed a few times an hour, and the Lock Screen activity only moves while MiniWatts itself is running.")
+                Text("Puts the reading in a floating window that stays on top of other apps and keeps updating once a second. It is the only place iOS lets an app keep a number moving while it is off screen: a widget is refreshed a few times an hour, and the Lock Screen activity only moves while MiniWatts Pro itself is running.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -201,7 +205,7 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("While the window is open MiniWatts keeps running, so it also records the charge with the screen locked — and it draws more power than being suspended. Close the window when you are done with it. No sound is ever played; the window uses the same system feature as a video playing in the corner, which is why the app declares audio playback at all.")
+                Text("While the window is open MiniWatts Pro keeps running, so it also records the charge with the screen locked — and it draws more power than being suspended. Close the window when you are done with it. No sound is ever played; the window uses the same system feature as a video playing in the corner, which is why the app declares audio playback at all.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -288,7 +292,7 @@ struct SettingsView: View {
 
     /// Where the source lives. Kept as a constant rather than built inline: a typo in
     /// a string literal would only show up as a force-unwrap crash on this screen.
-    private static let repository = URL(string: "https://github.com/ResistanceTo/MiniWatts")!
+    private static let repository = URL(string: "https://github.com/Ccat-Q/MiniWatts-Pro")!
 
     private var aboutPanel: some View {
         Panel("About", systemImage: "info.circle") {
@@ -309,7 +313,7 @@ struct SettingsView: View {
                 }
                 Link(destination: Self.repository) {
                     HStack(spacing: 8) {
-                        Text(verbatim: "github.com/ResistanceTo/MiniWatts")
+                        Text(verbatim: "github.com/Ccat-Q/MiniWatts-Pro")
                             .mwMono(size: 12, weight: .medium)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -326,7 +330,7 @@ struct SettingsView: View {
                     )
                 }
                 .padding(.bottom, 4)
-                Text("MiniWatts reads the phone's own power management sensors through private frameworks — IOKit, IOHIDEventSystemClient and BatteryCenter. Nothing leaves the device and nothing is written outside the app's own container.")
+                Text("MiniWatts Pro reads the phone's own power management sensors through private frameworks — IOKit, IOHIDEventSystemClient and BatteryCenter. Analysis stays on this device; reports leave only when you choose to share them.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)

@@ -18,7 +18,8 @@ private nonisolated struct RunPoint<X: Plottable & Hashable>: Identifiable {
 
 private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [Sample],
                                                                      x: (Sample) -> X,
-                                                                     watts: (Sample) -> Double?) -> [RunPoint<X>] {
+                                                                     watts: (Sample) -> Double?,
+                                                                     breaks: (Sample, Sample) -> Bool = { _, _ in false }) -> [RunPoint<X>] {
     var points: [RunPoint<X>] = []
     var run = 0
     var runStart = 0
@@ -26,7 +27,10 @@ private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [
         if points.count - runStart == 1 { points[runStart].isAlone = true }
         runStart = points.count
     }
+    var previous: Sample?
     for sample in samples {
+        if let previous, breaks(previous, sample), points.count > runStart { close(); run += 1 }
+        previous = sample
         guard let value = watts(sample), value.isFinite else {
             if points.count > runStart {
                 close()
@@ -38,6 +42,25 @@ private nonisolated func runPoints<Sample, X: Plottable & Hashable>(_ samples: [
     }
     close()
     return points
+}
+
+/// Reduce only the drawing points. Keep run boundaries and both extrema in each bucket.
+/// Persistence, statistical analysis and report export never use this reduction.
+private nonisolated func displayPoints<X: Plottable & Hashable>(_ points: [RunPoint<X>]) -> [RunPoint<X>] {
+    guard points.count > 1024 else { return points }
+    let bucketSize = max(4, Int(ceil(Double(points.count) / 256)))
+    var result: [RunPoint<X>] = []
+    var start = 0
+    while start < points.count {
+        var end = min(start + bucketSize, points.count)
+        if let boundary = (start..<end).first(where: { points[$0].run != points[start].run }) { end = boundary }
+        let range = start..<end
+        let low = range.min { points[$0].watts < points[$1].watts }!
+        let high = range.max { points[$0].watts < points[$1].watts }!
+        for index in Set([start, end - 1, low, high]).sorted() { result.append(points[index]) }
+        start = end
+    }
+    return result
 }
 
 /// The runs of one rail as broken lines. `name` is the series the legend and
@@ -89,8 +112,8 @@ struct LivePowerChart: View {
     let samples: [LiveSample]
     var height: CGFloat = 130
 
-    private var inputPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.inputWatts) }
-    private var batteryPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.batteryWatts) }
+    private var inputPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.inputWatts, breaks: { $1.date.timeIntervalSince($0.date) > 10 }) }
+    private var batteryPoints: [RunPoint<Date>] { runPoints(samples, x: \.date, watts: \.batteryWatts, breaks: { $1.date.timeIntervalSince($0.date) > 10 }) }
 
     private var ceiling: Double {
         let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
@@ -134,8 +157,8 @@ struct SessionPowerChart: View {
     let samples: [ChargeSample]
     var height: CGFloat = 150
 
-    private var inputPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.inputWatts) }
-    private var batteryPoints: [RunPoint<TimeInterval>] { runPoints(samples, x: \.offset, watts: \.batteryWatts) }
+    private var inputPoints: [RunPoint<TimeInterval>] { displayPoints(runPoints(samples, x: \.offset, watts: \.inputWatts, breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 })) }
+    private var batteryPoints: [RunPoint<TimeInterval>] { displayPoints(runPoints(samples, x: \.offset, watts: \.batteryWatts, breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 })) }
 
     private var ceiling: Double {
         let peak = (samples.compactMap(\.inputWatts) + samples.compactMap(\.batteryWatts))
@@ -155,8 +178,7 @@ struct SessionPowerChart: View {
                      name: "Into battery",
                      color: .mwBattery,
                      style: StrokeStyle(lineWidth: 1.4, dash: [4, 3]))
-            // Shade the stretches where iOS was thermally throttling, which is
-            // where the curve usually falls off a cliff.
+            // Mark observed thermal pressure without attributing changes in power to it.
             ForEach(samples.filter(\.throttled)) { sample in
                 RectangleMark(x: .value("Elapsed", sample.offset),
                               yStart: .value("Watts", 0),
@@ -222,12 +244,10 @@ struct SessionClimateChart: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Chart(samples) { sample in
-                LineMark(x: .value("Elapsed", sample.offset),
-                         y: .value("Percent", Double(sample.percent)))
-                    .foregroundStyle(Color.mwWireless)
-                    .lineStyle(StrokeStyle(lineWidth: 1.8))
-                    .interpolationMethod(.monotone)
+            Chart {
+                runLines(displayPoints(runPoints(samples, x: \.offset, watts: { $0.percent.map(Double.init) },
+                                   breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 })),
+                         axis: "Elapsed", name: "Charge %", color: .mwWireless, style: StrokeStyle(lineWidth: 1.8))
             }
             .chartYScale(domain: 0...100)
             .chartXScale(domain: xDomain)
@@ -251,12 +271,10 @@ struct SessionClimateChart: View {
             if temperatures.isEmpty {
                 EmptyNote(text: "No cell temperature was recorded for this session.")
             } else {
-                Chart(temperatures) { sample in
-                    LineMark(x: .value("Elapsed", sample.offset),
-                             y: .value("Celsius", sample.batteryTemperature ?? 0))
-                        .foregroundStyle(Color.mwLoss)
-                        .lineStyle(StrokeStyle(lineWidth: 1.4))
-                        .interpolationMethod(.monotone)
+                Chart {
+                    runLines(displayPoints(runPoints(samples, x: \.offset, watts: \.batteryTemperature,
+                                       breaks: { $1.startsNewObservation || $1.offset - $0.offset > 10 })),
+                             axis: "Elapsed", name: "Battery °C", color: .mwLoss, style: StrokeStyle(lineWidth: 1.4))
                 }
                 .chartYScale(domain: temperatureDomain)
                 .chartXScale(domain: xDomain)

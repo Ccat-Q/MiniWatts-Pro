@@ -8,9 +8,10 @@ struct DashboardView: View {
     private var plugged: Bool { snapshot.externalConnected }
 
     var body: some View {
-        PageScaffold("MiniWatts", glow: glowColor, toolbar: AnyView(toolbarButtons)) {
+        PageScaffold("MiniWatts Pro", glow: glowColor, toolbar: AnyView(toolbarButtons)) {
             heroPanel
             if monitor.thermal.state.isThrottling { throttleBanner }
+            ChargePredictionPanel()
             batteryPanel
             breakdownPanel
             livePanel
@@ -128,14 +129,7 @@ struct DashboardView: View {
                            detail: "\(percent)%",
                            fraction: Double(percent) / 100,
                            tint: percent <= 20 ? .mwDanger : .mwBattery,
-                           subtitle: snapshot.timeRemainingMinutes.map { minutes in
-                               // Two whole sentences rather than a fragment glued to a
-                               // number: word order around the duration is not the same
-                               // in every language.
-                               let remaining = Formatting.minutesRemaining(minutes)
-                               return snapshot.isCharging ? Text("full in \(remaining)")
-                                                          : Text("empty in \(remaining)")
-                           })
+                           subtitle: nil)
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Metric(caption: "Cell voltage",
@@ -174,11 +168,11 @@ struct DashboardView: View {
                     Metric(caption: "Load + loss",
                            value: snapshot.unaccountedPowerWatts.map(Formatting.watts) ?? "—",
                            unit: "W", tint: .mwLoss, size: 22)
-                    Metric(caption: "Cell share",
-                           value: snapshot.chargePathEfficiency.map { String(format: "%.0f", $0) } ?? "—",
+                    Metric(caption: "Conversion efficiency",
+                           value: snapshot.chargePathEfficiency.map { String(format: "%.1f", $0) } ?? "—",
                            unit: "%",
                            tint: efficiencyTint,
-                           footnote: Text("cell watts ÷ measured input watts"),
+                           footnote: Text("Instantaneous · cell W ÷ input W"),
                            size: 22)
                 }
                 if let input = snapshot.inputWatts, input > 0.2, let battery = snapshot.batteryWatts, battery > 0 {
@@ -188,6 +182,10 @@ struct DashboardView: View {
                     EmptyNote(text: "Charging wirelessly. The charge IC exposes the coil's voltage but no current to pair with it, so the power coming in cannot be measured — only what reaches the cell. The figure the charger reports about itself is a ceiling, not a reading, and does not move.",
                               systemImage: "wave.3.right")
                 }
+                Text("The share of measured input reaching the cell. Phone load and conversion loss affect this ratio.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.mwMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -225,16 +223,17 @@ struct DashboardView: View {
                                value: totals.measuredInputWattHours.map { String(format: "%.2f", $0) } ?? "—",
                                unit: "Wh", tint: .mwAccent, size: 20)
                         Metric(caption: "Stored",
-                               value: String(format: "%.2f", totals.batteryWattHours),
+                               value: totals.batteryMeasuredSeconds > 0 ? String(format: "%.2f", totals.batteryWattHours) : "—",
                                unit: "Wh", tint: .mwBattery, size: 20)
                     }
                     HStack(alignment: .top, spacing: 10) {
                         Metric(caption: "Into cell",
-                               value: String(format: "%.0f", totals.batteryMilliAmpHours),
+                               value: totals.batteryCurrentMeasuredSeconds > 0 ? String(format: "%.0f", totals.batteryMilliAmpHours) : "—",
                                unit: "mAh", size: 20)
-                        Metric(caption: "Cell share",
-                               value: totals.chargePathEfficiencyPercent.map { String(format: "%.0f", $0) } ?? "—",
-                               unit: "%", tint: .mwLoss, size: 20)
+                        Metric(caption: "Session efficiency",
+                               value: totals.chargePathEfficiencyPercent.map { String(format: "%.1f", $0) } ?? "—",
+                               unit: "%", tint: .mwLoss,
+                               footnote: Text("Paired cell Wh ÷ input Wh"), size: 20)
                     }
                 }
             } else {

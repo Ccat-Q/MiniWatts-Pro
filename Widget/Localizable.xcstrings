@@ -284,32 +284,12 @@
         }
       }
     },
-    "Open MiniWatts once, then check back." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先打开一次 MiniWatts，稍后再来查看。"
-          }
-        }
-      }
-    },
     "Other sensors" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "其他传感器"
-          }
-        }
-      }
-    },
-    "Paused — open MiniWatts to resume" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已暂停 — 打开 MiniWatts 以继续"
           }
         }
       }
@@ -554,6 +534,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "结束实时活动"
+          }
+        }
+      }
+    },
+    "Open MiniWatts Pro once, then check back." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先打开一次 MiniWatts Pro，稍后再来查看。"
+          }
+        }
+      }
+    },
+    "Paused — open MiniWatts Pro to resume" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已暂停 — 打开 MiniWatts Pro 以继续"
           }
         }
       }

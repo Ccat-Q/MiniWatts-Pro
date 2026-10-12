@@ -23,6 +23,7 @@ BUILD_DIR="build"
 DERIVED="$BUILD_DIR/DerivedData"
 ARCHIVE="$BUILD_DIR/$SCHEME.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
+OUTPUT_NAME="MiniWattsPro"
 
 # The version comes from git, so a release is one step: tag and push. Nothing in the
 # project file has to be edited first.
@@ -59,7 +60,7 @@ mkdir -p "$BUILD_DIR"
 
 # The version worked out above is handed to xcodebuild here. Bundle identifiers are
 # not: they come from the project exactly as Xcode has them —
-# org.zhaohe.MiniWatts for the app, org.zhaohe.MiniWatts.Widget for the widget. A build
+# io.github.ccatq.MiniWattsPro for the app, io.github.ccatq.MiniWattsPro.Widget for the widget. A build
 # setting given on the xcodebuild command line applies to every target at once, so the
 # BUNDLE_ID override this script used to have handed the widget extension the app's own
 # identifier, and iOS rejects an extension whose identifier does not extend its app's.
@@ -116,9 +117,9 @@ if [ "$MODE" = "unsigned" ]; then
     executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$appex/Info.plist")"
     xcrun strip -S -x "$appex/$executable"
   done < <(find "$BUILD_DIR/Payload/$SCHEME.app" -name '*.appex' -type d -print0)
-  (cd "$BUILD_DIR" && zip -qry "export/$SCHEME-unsigned.ipa" Payload)
+  (cd "$BUILD_DIR" && zip -qry "export/$OUTPUT_NAME-unsigned.ipa" Payload)
   rm -rf "$BUILD_DIR/Payload"
-  IPA="$EXPORT_DIR/$SCHEME-unsigned.ipa"
+  IPA="$EXPORT_DIR/$OUTPUT_NAME-unsigned.ipa"
 else
   echo "==> Archiving ($METHOD)"
   xcodebuild archive \

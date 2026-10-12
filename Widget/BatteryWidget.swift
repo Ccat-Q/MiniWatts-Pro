@@ -55,7 +55,7 @@ struct BatteryProvider: TimelineProvider {
 // MARK: - Widget
 
 struct BatteryWidget: Widget {
-    let kind = "org.zhaohe.MiniWatts.battery"
+    let kind = "io.github.ccatq.MiniWattsPro.battery"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: BatteryProvider()) { entry in
@@ -235,8 +235,10 @@ struct LastChargeSummary: View {
                 .textCase(.uppercase)
                 .foregroundStyle(palette.muted)
             HStack(spacing: 6) {
-                Text(verbatim: "+\(max(session.endPercent - session.startPercent, 0))%")
-                Text(verbatim: Formatting.wattHours(session.storedWattHours))
+                if let start = session.startPercent, let end = session.endPercent {
+                    Text(verbatim: "+\(max(end - start, 0))%")
+                } else { Text(verbatim: "—") }
+                Text(verbatim: session.storedWattHours.map(Formatting.wattHours) ?? "—")
                 if let efficiency = session.efficiencyPercent {
                     Text(verbatim: String(format: "%.0f%%", efficiency))
                         .foregroundStyle(palette.loss)
@@ -298,7 +300,7 @@ struct NoReadingView: View {
                 .foregroundStyle(palette.muted)
             Text("No reading")
                 .font(.system(size: 14, weight: .semibold))
-            Text("Open MiniWatts once, then check back.")
+            Text("Open MiniWatts Pro once, then check back.")
                 .font(.system(size: 11))
                 .foregroundStyle(palette.muted)
         }

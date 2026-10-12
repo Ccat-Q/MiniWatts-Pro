@@ -20,6 +20,7 @@
 			remoteGlobalIDString = 7BC8FC4A3053B50B0081E0FD;
 			remoteInfo = WidgetExtension;
 		};
+		E12D6B710000000000000001 /* UI test app proxy */ = {isa = PBXContainerItemProxy; containerPortal = 7BD6BADB3051337000B3648E; proxyType = 1; remoteGlobalIDString = 7BD6BAE23051337000B3648E; remoteInfo = MiniWatts; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -41,6 +42,7 @@
 		7BC8FC4D3053B50B0081E0FD /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7BC8FC4F3053B50B0081E0FD /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7BD6BAE33051337000B3648E /* MiniWatts.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiniWatts.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E12D6B710000000000000002 /* MiniWattsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiniWattsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -61,6 +63,7 @@
 		E03CF1C910266219FC3F809F /* Exceptions for "MiniWatts" folder in "WidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Core/Model/ChargeEfficiency.swift,
 				Core/Model/Formatting.swift,
 				Core/Model/PowerSnapshot.swift,
 				Core/Sensors/HIDSensors.swift,
@@ -93,6 +96,7 @@
 			path = MiniWatts;
 			sourceTree = "<group>";
 		};
+		E12D6B710000000000000003 /* UITests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = UITests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +116,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E12D6B710000000000000004 /* UI test frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -130,6 +135,7 @@
 				7BD6BAE53051337000B3648E /* MiniWatts */,
 				7BC8FC513053B50B0081E0FD /* Widget */,
 				7BC8FC4C3053B50B0081E0FD /* Frameworks */,
+				E12D6B710000000000000003 /* UITests */,
 				7BD6BAE43051337000B3648E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -139,6 +145,7 @@
 			children = (
 				7BD6BAE33051337000B3648E /* MiniWatts.app */,
 				7BC8FC4B3053B50B0081E0FD /* WidgetExtension.appex */,
+				E12D6B710000000000000002 /* MiniWattsUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -190,6 +197,18 @@
 			productReference = 7BD6BAE33051337000B3648E /* MiniWatts.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E12D6B710000000000000005 /* MiniWattsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E12D6B710000000000000009;
+			buildPhases = (E12D6B710000000000000006, E12D6B710000000000000004, E12D6B710000000000000007);
+			buildRules = ();
+			dependencies = (E12D6B710000000000000008);
+			fileSystemSynchronizedGroups = (E12D6B710000000000000003);
+			name = MiniWattsUITests;
+			productName = MiniWattsUITests;
+			productReference = E12D6B710000000000000002;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -200,6 +219,7 @@
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					E12D6B710000000000000005 = {CreatedOnToolsVersion = 26.0; TestTargetID = 7BD6BAE23051337000B3648E; };
 					7BC8FC4A3053B50B0081E0FD = {
 						CreatedOnToolsVersion = 27.0;
 					};
@@ -225,6 +245,7 @@
 			targets = (
 				7BD6BAE23051337000B3648E /* MiniWatts */,
 				7BC8FC4A3053B50B0081E0FD /* WidgetExtension */,
+				E12D6B710000000000000005 /* MiniWattsUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -244,6 +265,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E12D6B710000000000000007 /* UI test resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -261,6 +283,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E12D6B710000000000000006 /* UI test sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -269,6 +292,7 @@
 			target = 7BC8FC4A3053B50B0081E0FD /* WidgetExtension */;
 			targetProxy = 7BC8FC5F3053B50E0081E0FD /* PBXContainerItemProxy */;
 		};
+		E12D6B710000000000000008 /* UI test app dependency */ = {isa = PBXTargetDependency; target = 7BD6BAE23051337000B3648E; targetProxy = E12D6B710000000000000001; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -283,7 +307,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MiniWatts;
+				INFOPLIST_KEY_CFBundleDisplayName = "MiniWatts Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -292,7 +316,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.zhaohe.MiniWatts.Widget;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro.Widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -315,7 +339,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MiniWatts;
+				INFOPLIST_KEY_CFBundleDisplayName = "MiniWatts Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -324,7 +348,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.zhaohe.MiniWatts.Widget;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro.Widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -472,6 +496,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MiniWatts/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "ZhaoHe Studio";
+				INFOPLIST_KEY_CFBundleDisplayName = "MiniWatts Pro";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -482,7 +507,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.zhaohe.MiniWatts;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -507,6 +532,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MiniWatts/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "ZhaoHe Studio";
+				INFOPLIST_KEY_CFBundleDisplayName = "MiniWatts Pro";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -517,7 +543,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.zhaohe.MiniWatts;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -526,6 +552,34 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E12D6B71000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = MiniWatts;
+			};
+			name = Debug;
+		};
+		E12D6B71000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.ccatq.MiniWattsPro.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = MiniWatts;
 			};
 			name = Release;
 		};
@@ -559,6 +613,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		E12D6B710000000000000009 /* UI test configurations */ = {isa = XCConfigurationList; buildConfigurations = (E12D6B71000000000000000A, E12D6B71000000000000000B); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 7BD6BADB3051337000B3648E /* Project object */;

@@ -31,7 +31,8 @@ struct AdapterView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(snapshot.inputWatts.map(Formatting.watts) ?? "—")
-                        .mwReadout(size: snapshot.inputWatts == nil ? 30 : 44)
+                        .mwReadout(size: snapshot.inputWatts == nil ? 30 : 44,
+                                   animatedValue: snapshot.inputWatts.map(Formatting.watts))
                         .foregroundStyle(snapshot.inputWatts == nil ? Color.mwMuted.opacity(0.55) : Color.mwAccent)
                     Text(verbatim: "W")
                         .font(.system(size: 18, weight: .medium, design: .rounded))

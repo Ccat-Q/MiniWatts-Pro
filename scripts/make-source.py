@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Writes the AltStore / SideStore source for one release, to stdout.
 
-    scripts/make-source.py build/export/MiniWatts-unsigned.ipa v1.1.0 > build/export/apps.json
+    scripts/make-source.py build/export/MiniWattsPro-unsigned.ipa v1.1.0 > build/export/apps.json
 
 CI runs this on every `v*` tag and publishes the result as an asset of the release,
 next to the ipa. That gives the source an address that never changes —
 
-    https://github.com/ResistanceTo/MiniWatts/releases/latest/download/apps.json
+    https://github.com/Ccat-Q/MiniWatts-Pro/releases/latest/download/apps.json
 
 — because `releases/latest` follows the newest release that is not a pre-release. A
 beta tag therefore never reaches people who added the source, and nothing has to be
@@ -25,15 +25,15 @@ import plistlib
 import sys
 import zipfile
 
-REPO = os.environ.get("GITHUB_REPOSITORY", "ResistanceTo/MiniWatts")
-BUNDLE_ID = "org.zhaohe.MiniWatts"
+REPO = os.environ.get("GITHUB_REPOSITORY", "Ccat-Q/MiniWatts-Pro")
+BUNDLE_ID = "io.github.ccatq.MiniWattsPro"
 # Images come from master, not from the tag: they are presentation, and a release tagged
 # before an image existed would otherwise point at a file that is not there.
 RAW = f"https://raw.githubusercontent.com/{REPO}/master"
 SCREENSHOT_SIZE = (1260, 2736)
 
 DESCRIPTION = """\
-MiniWatts reads the iPhone's own power management sensors and shows what is actually \
+MiniWatts Pro reads the iPhone's own power management sensors and shows what is actually \
 flowing: charger input in watts, what reaches the battery, rail voltages and currents, \
 every temperature sensor placed on a map of the phone, the USB-PD profiles the charger \
 offers, and a history of each charge.
@@ -45,9 +45,9 @@ between models, so some readings may be wrong on yours.
 Includes a Home Screen and Lock Screen widget, a charging Live Activity and a floating \
 Picture in Picture meter. The widget and the Live Activity live in an app extension: \
 signing it takes one more App ID, and LiveContainer cannot run extensions, so installed \
-there MiniWatts has neither.
+there MiniWatts Pro has neither.
 
-Free and open source: https://github.com/ResistanceTo/MiniWatts"""
+Free and open source: https://github.com/Ccat-Q/MiniWatts-Pro"""
 
 
 def fail(message):
@@ -92,22 +92,22 @@ def main():
         .replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     source = {
-        "name": "MiniWatts",
+        "name": "MiniWatts Pro",
         # Not in AltStore's current format, but older AltStore and SideStore builds
         # identify a source by it. Harmless where it is ignored.
         "identifier": f"{BUNDLE_ID}.source",
         "sourceURL": f"https://github.com/{REPO}/releases/latest/download/apps.json",
         "subtitle": "Live charge power, battery and thermal sensors.",
-        "description": "The MiniWatts app, straight from its GitHub releases.",
+        "description": "The MiniWatts Pro app, straight from its GitHub releases.",
         "iconURL": f"{RAW}/docs/icon.png",
         "website": f"https://github.com/{REPO}",
         "tintColor": "#0086B3",
         # No `marketplaceID` anywhere: SideStore takes its presence to mean a notarized
         # AltStore PAL source and refuses to add it.
         "apps": [{
-            "name": "MiniWatts",
+            "name": "MiniWatts Pro",
             "bundleIdentifier": BUNDLE_ID,
-            "developerName": "ResistanceTo",
+            "developerName": "Ccat-Q (based on MiniWatts by ResistanceTo)",
             "subtitle": "Live charge power, battery and thermal sensors.",
             "localizedDescription": DESCRIPTION,
             "iconURL": f"{RAW}/docs/icon.png",

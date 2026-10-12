@@ -7,6 +7,9 @@
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
       <BuildActionEntries>
+         <BuildActionEntry buildForTesting = "YES" buildForRunning = "NO" buildForProfiling = "NO" buildForArchiving = "NO" buildForAnalyzing = "YES">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "E12D6B710000000000000005" BuildableName = "MiniWattsUITests.xctest" BlueprintName = "MiniWattsUITests" ReferencedContainer = "container:MiniWatts.xcodeproj" />
+         </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
@@ -29,6 +32,11 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference skipped = "NO" parallelizable = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "E12D6B710000000000000005" BuildableName = "MiniWattsUITests.xctest" BlueprintName = "MiniWattsUITests" ReferencedContainer = "container:MiniWatts.xcodeproj" />
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

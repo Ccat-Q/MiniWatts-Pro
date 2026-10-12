@@ -17,16 +17,14 @@ final class ChargeActivityController {
     private var activity: Activity<ChargeActivityAttributes>?
     private var adopted = false
     private var lastSent: ChargeActivityContentState?
-    private var lastSentAt: Date = .distantPast
+    private var updateGate = LiveActivityUpdateGate()
+    private var needsRefresh = false
+    private var publication: Task<Void, Never>?
     private var lastStartAttempt: Date = .distantPast
 
     /// How long past an update its reading still counts as current. Updates go out
     /// every few seconds; this tolerates a couple of missed ones and no more.
     private static let staleAfter: TimeInterval = 45
-    /// Minimum spacing between updates.
-    private static let minimumInterval: TimeInterval = 5
-    /// An update goes out at least this often, if only to push the stale date forward.
-    private static let maximumInterval: TimeInterval = 20
     /// After a refused start — too many activities, the user switched them off —
     /// wait this long before trying again rather than asking every second.
     private static let retryInterval: TimeInterval = 30
@@ -53,6 +51,21 @@ final class ChargeActivityController {
         }
     }
 
+    /// Mark the next fresh sensor tick for immediate submission after foregrounding.
+    func resume() { needsRefresh = true }
+
+    /// A Live Activity does not keep sensor sampling alive. Publish the pause before
+    /// suspension instead of leaving the old measurement looking current for 45 s.
+    func pause(_ snapshot: PowerSnapshot, selectedMetric: LiveActivityMetric, enabled: Bool) {
+        adoptExistingActivities()
+        var state = Self.contentState(from: snapshot, selectedMetric: selectedMetric)
+        state.observationPaused = true
+        guard enabled else { end(with: state, dismissal: .immediate); return }
+        guard let activity else { return }
+        update(activity, with: state, force: true)
+        needsRefresh = true
+    }
+
     /// An activity outlives the app being killed. The first sync after launch picks up
     /// one left behind and ends any others, rather than starting a duplicate.
     private func adoptExistingActivities() {
@@ -76,7 +89,8 @@ final class ChargeActivityController {
                 content: content(for: state),
                 pushType: nil)
             lastSent = state
-            lastSentAt = state.date
+            _ = updateGate.shouldSend(at: state.date, changed: true, force: true)
+            needsRefresh = false
         } catch {
             // Refused: not frontmost after all, activities disabled, or the system
             // limit reached. Tried again after `retryInterval`.
@@ -84,15 +98,18 @@ final class ChargeActivityController {
     }
 
     private func update(_ activity: Activity<ChargeActivityAttributes>,
-                        with state: ChargeActivityContentState) {
-        let elapsed = state.date.timeIntervalSince(lastSentAt)
-        guard elapsed >= Self.minimumInterval else { return }
-        if elapsed < Self.maximumInterval, let lastSent, !Self.differs(lastSent, state) { return }
+                        with state: ChargeActivityContentState, force: Bool = false) {
+        let changed = lastSent.map { Self.differs($0, state) } ?? true
+        let urgent = force || needsRefresh || lastSent?.isPaused != state.isPaused
+            || lastSent?.selectedMetric != state.selectedMetric
+        guard updateGate.shouldSend(at: state.date, changed: changed, force: urgent) else { return }
         lastSent = state
-        lastSentAt = state.date
+        needsRefresh = false
         let content = content(for: state)
         let id = activity.id
-        Task { await Self.update(id, content) }
+        // Preserve tick/pause/resume order across ActivityKit's asynchronous calls.
+        let previous = publication
+        publication = Task { await previous?.value; await Self.update(id, content) }
     }
 
     private func end(with state: ChargeActivityContentState,
@@ -100,10 +117,11 @@ final class ChargeActivityController {
         guard let activity else { return }
         self.activity = nil
         lastSent = nil
-        lastSentAt = .distantPast
+        updateGate.reset()
         let final = ActivityContent(state: state, staleDate: nil)
         let id = activity.id
-        Task { await Self.end(id, final, dismissal: dismissal) }
+        let previous = publication
+        publication = Task { await previous?.value; await Self.end(id, final, dismissal: dismissal) }
     }
 
     // `Activity` is not `Sendable`, and its `update` and `end` are nonisolated async.
@@ -133,7 +151,7 @@ final class ChargeActivityController {
         for state: ChargeActivityContentState
     ) -> ActivityContent<ChargeActivityContentState> {
         ActivityContent(state: state,
-                        staleDate: state.date.addingTimeInterval(Self.staleAfter))
+                        staleDate: state.isPaused ? .now : state.date.addingTimeInterval(Self.staleAfter))
     }
 
     /// Whether a reading has moved enough to be worth an update on its own.
@@ -144,17 +162,22 @@ final class ChargeActivityController {
         let oldReading = old.reading
         let newReading = new.reading
         return old.selectedMetric != new.selectedMetric
+            || old.isPaused != new.isPaused
             || oldReading.percent != newReading.percent
             || oldReading.source != newReading.source
             || oldReading.isCharging != newReading.isCharging
             || oldReading.isOnHold != newReading.isOnHold
             || oldReading.isFull != newReading.isFull
-            || abs((oldReading.watts ?? -1) - (newReading.watts ?? -1)) >= 0.2
-            || abs((oldReading.batteryTemperature ?? 0)
-                   - (newReading.batteryTemperature ?? 0)) >= 0.5
-            || abs((old.socTemperature ?? 0) - (new.socTemperature ?? 0)) >= 0.5
-            || abs((old.hottestTemperature ?? 0) - (new.hottestTemperature ?? 0)) >= 0.5
+            || displayed(oldReading.watts) != displayed(newReading.watts)
+            || displayed(oldReading.batteryTemperature) != displayed(newReading.batteryTemperature)
+            || displayed(old.socTemperature) != displayed(new.socTemperature)
+            || displayed(old.hottestTemperature) != displayed(new.hottestTemperature)
             || old.hottestSensorName != new.hottestSensorName
+    }
+
+    private static func displayed(_ value: Double?) -> String? {
+        guard let value, value.isFinite else { return nil }
+        return String(format: "%.1f", value)
     }
 
     private static func contentState(

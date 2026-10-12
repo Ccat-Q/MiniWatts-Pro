@@ -39,7 +39,15 @@ final class FloatingMeterController {
         case failed(String)
     }
 
-    private(set) var status: Status
+    private(set) var status: Status {
+        didSet {
+            let wasRunning = oldValue == .running || oldValue == .starting
+            if wasRunning != isRunning { onRunningChange?(isRunning) }
+        }
+    }
+    /// System lifecycle callbacks must reach monitoring even when background
+    /// SwiftUI views no longer evaluate their onChange handlers.
+    @ObservationIgnored var onRunningChange: ((Bool) -> Void)?
     /// The system will only open a window once the layer has painted a frame and is
     /// on screen, so the button waits for this.
     private(set) var isReady = false

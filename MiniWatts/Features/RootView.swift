@@ -19,7 +19,7 @@ struct RootView: View {
             TabPage { DevicesView() }
                 .tabItem { Label("Devices", systemImage: "square.stack.3d.up.fill") }
             TabPage { SessionsView() }
-                .tabItem { Label("History", systemImage: "chart.xyaxis.line") }
+                .tabItem { Label("Analysis", systemImage: "chart.xyaxis.line") }
         }
         .tint(.mwAccent)
         .background { ScreenAwakeHolder() }
@@ -47,10 +47,24 @@ struct RootView: View {
                                   isForeground: UIApplication.shared.applicationState == .active)
                 widgets.publish(reading, lastSession: monitor.sessions.first)
             }
+            floatingMeter.onRunningChange = { [weak monitor, liveActivity] running in
+                guard UIApplication.shared.applicationState == .background,
+                      let monitor else { return }
+                if running {
+                    liveActivity.resume()
+                    monitor.start()
+                } else {
+                    monitor.pause()
+                    liveActivity.pause(monitor.snapshot,
+                                       selectedMetric: monitor.liveActivityMetric,
+                                       enabled: monitor.showsLiveActivityWhileCharging)
+                }
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
+                liveActivity.resume()
                 monitor.start()
             case .background:
                 // Sensor reads are pointless while suspended, so the tick stops —
@@ -61,7 +75,7 @@ struct RootView: View {
                 // the sensors can still be read, the window keeps a live number on
                 // screen and the charge is recorded through a locked screen.
                 if !floatingMeter.isRunning {
-                    monitor.pause()
+                    pauseMonitoring()
                 }
                 // Last chance to leave the widget something fresh to fall back on.
                 widgets.flush(ChargeReading(monitor.snapshot), lastSession: monitor.sessions.first)
@@ -72,6 +86,13 @@ struct RootView: View {
                 break
             }
         }
+    }
+
+    private func pauseMonitoring() {
+        monitor.pause()
+        liveActivity.pause(monitor.snapshot,
+                           selectedMetric: monitor.liveActivityMetric,
+                           enabled: monitor.showsLiveActivityWhileCharging)
     }
 }
 
@@ -158,10 +179,7 @@ struct PageScaffold<Content: View>: View {
             ZStack {
                 PageBackdrop(glow: glow)
                 ScrollView {
-                    // Lazy, not a plain `VStack`. History puts up to sixty session
-                    // panels in here, each with its own sparkline, and an eager stack
-                    // builds and measures every one of them — while charging, once a
-                    // second, because the page reads the live session.
+                    // Long histories remain lazy while the live record updates.
                     LazyVStack(spacing: 14) {
                         PageContent(content: content)
                     }
@@ -175,6 +193,7 @@ struct PageScaffold<Content: View>: View {
                     // that width propagates up and the page starts scrolling sideways.
                     .containerRelativeFrame(.horizontal)
                 }
+                .mwPauseReadoutMotionWhileScrolling()
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.large)

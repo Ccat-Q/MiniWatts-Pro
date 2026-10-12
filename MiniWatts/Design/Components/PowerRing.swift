@@ -4,6 +4,9 @@ import SwiftUI
 /// what the adapter is delivering, the inner one is what reaches the cell. The
 /// gap between them is power not observed at the battery rail, visible at a glance.
 struct PowerRing: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.mwAllowsReadoutAnimation) private var allowsMotion
+    @State private var isVisible = false
     let inputWatts: Double?
     let batteryWatts: Double?
     /// Full-scale value. The adapter's nameplate rating when known, so the dial
@@ -20,18 +23,18 @@ struct PowerRing: View {
     private let startAngle: Double = 130
 
     private var inputFraction: CGFloat {
-        guard fullScale > 0, let inputWatts else { return 0 }
+        guard fullScale.isFinite, fullScale > 0, let inputWatts, inputWatts.isFinite else { return 0 }
         return CGFloat(min(max(inputWatts / fullScale, 0), 1))
     }
 
     private var batteryFraction: CGFloat {
-        guard fullScale > 0, let batteryWatts, batteryWatts > 0 else { return 0 }
+        guard fullScale.isFinite, fullScale > 0, let batteryWatts, batteryWatts.isFinite, batteryWatts > 0 else { return 0 }
         return CGFloat(min(max(batteryWatts / fullScale, 0), 1))
     }
 
     var body: some View {
-        // Both fractions change on the one-second tick. Animating them kept the
-        // dial drawing for almost half of every second while the page scrolled.
+        // Only each foreground arc animates; the ticks, track and centre do not
+        // inherit its transaction. Pause motion during scrolling and Reduce Motion.
         ZStack {
             ticks
             arc(width: 14, inset: 0, fraction: inputFraction, color: tint)
@@ -39,6 +42,8 @@ struct PowerRing: View {
             centre
         }
         .frame(width: size, height: size)
+        .onAppear { isVisible = true }
+        .onDisappear { isVisible = false }
     }
 
     private var ticks: some View {
@@ -66,14 +71,17 @@ struct PowerRing: View {
     }
 
     private func arc(width: CGFloat, inset: CGFloat, fraction: CGFloat, color: Color) -> some View {
-        ZStack {
+        let progress = isVisible ? fraction : 0
+        return ZStack {
             Circle()
                 .trim(from: 0, to: sweep)
                 .stroke(Color.mwMuted.opacity(0.14), style: StrokeStyle(lineWidth: width, lineCap: .round))
             Circle()
-                .trim(from: 0, to: sweep * fraction)
+                .trim(from: 0, to: sweep * progress)
                 .stroke(Theme.gradient(color), style: StrokeStyle(lineWidth: width, lineCap: .round))
                 .shadow(color: color.opacity(fraction > 0.01 ? 0.55 : 0), radius: 10)
+                .animation(!reduceMotion && allowsMotion ? .easeOut(duration: 0.28) : nil, value: progress)
+                .transaction { if reduceMotion || !allowsMotion { $0.animation = nil } }
         }
         .rotationEffect(.degrees(startAngle))
         .padding(width / 2 + inset)
@@ -82,9 +90,10 @@ struct PowerRing: View {
     private var centre: some View {
         VStack(spacing: 2) {
             if let inputWatts {
+                let displayed = Formatting.watts(inputWatts)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(Formatting.watts(inputWatts))
-                        .mwReadout(size: 52, weight: .semibold)
+                    Text(displayed)
+                        .mwReadout(size: 52, weight: .semibold, animatedValue: displayed)
                         .foregroundStyle(tint)
                     Text(verbatim: "W")
                         .font(.system(size: 20, weight: .medium, design: .rounded))

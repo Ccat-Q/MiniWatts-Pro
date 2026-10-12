@@ -1,12 +1,11 @@
 name: Build
 
-# Pushing to master no longer builds. Two things do:
+# The implementation branch builds on push. Also supported:
 #   - a `v*` tag, which builds and publishes a GitHub release
 #   - a pull request, or a manual run, which builds and checks but publishes nothing
 #
-# The cost of dropping master builds is that a broken commit is not noticed until you
-# tag. Run this workflow by hand (Actions -> Build -> Run workflow) before tagging, or
-# just build locally with ./scripts/build-ipa.sh, which runs the same steps.
+# All compilation and automated tests run here. Validate a commit with this workflow
+# before creating a release tag.
 #
 # Cutting a release is `git tag v1.2.0 && git push origin v1.2.0`, and nothing else.
 # The version comes from the tag and the build number from the commit count; the
@@ -14,15 +13,98 @@ name: Build
 on:
   push:
     tags: ["v*"]
+    branches: ["codex/miniwatts-pro-analysis"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A branch push and its PR synchronization share the same runner budget.
+# Keep the latest complete verification; distinct version tags remain independent.
+concurrency:
+  group: build-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ startsWith(github.ref, 'refs/tags/') && 'tag' || 'branch' }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
+  # Isolated macOS runners boot the report and application simulators concurrently.
+  # Cache compilation only. Every test runs even when a cache key matches exactly.
+  reports:
+    name: Analysis and report tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Xcode
+        id: xcode
+        uses: ./.github/actions/setup-xcode
+
+      - name: Cache analysis and report compiler modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/AnalysisModuleCache
+            build/ReportModuleCache
+          key: ${{ runner.os }}-${{ runner.arch }}-reports-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('scripts/test-reports.sh', '.github/actions/setup-xcode/action.yml') }}-${{ hashFiles('MiniWatts/Core/Model/**', 'MiniWatts/Localizable.xcstrings', 'Tests/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-reports-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('scripts/test-reports.sh', '.github/actions/setup-xcode/action.yml') }}-
+
+      - name: Test analysis models and storage
+        run: |
+          mkdir -p build/AnalysisModuleCache
+          xcrun swiftc -swift-version 6 -parse-as-library -module-cache-path build/AnalysisModuleCache MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/LiveActivityUpdateGate.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
+          build/analysis-tests
+
+      - name: Test PDF and CSV exports in iOS simulator
+        timeout-minutes: 10
+        run: bash scripts/test-reports.sh
+
+      - name: Upload report test fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-test-fixtures
+          path: build/report-fixtures
+          if-no-files-found: error
+
+  interactions:
+    name: Application interaction tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Xcode
+        id: xcode
+        uses: ./.github/actions/setup-xcode
+
+      - name: Cache simulator Debug compilation
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/UITestDerivedData/Build
+            build/UITestDerivedData/ModuleCache.noindex
+            build/UITestDerivedData/SDKStatCaches.noindex
+            build/UITestDerivedData/CompilationCache.noindex
+          key: ${{ runner.os }}-${{ runner.arch }}-simulator-debug-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('MiniWatts.xcodeproj/**', 'scripts/test-interactions.sh', '.github/actions/setup-xcode/action.yml') }}-${{ hashFiles('MiniWatts/**', 'Widget/**', 'UITests/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-simulator-debug-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('MiniWatts.xcodeproj/**', 'scripts/test-interactions.sh', '.github/actions/setup-xcode/action.yml') }}-
+
+      - name: Test prediction controls in the application
+        timeout-minutes: 15
+        run: bash scripts/test-interactions.sh
+
+      - name: Upload interaction test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interaction-test-results
+          path: |
+            build/ui-tests.xcresult
+            build/ui-tests.log
+            build/ui-attachments
+            build/ui-summary.json
+          if-no-files-found: ignore
+
   ipa:
     name: Unsigned ipa
+    needs: [reports, interactions]
     runs-on: macos-latest
     permissions:
       # Only the release step at the bottom uses this, and only on a tag.
@@ -35,39 +117,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Select newest Xcode
-        run: |
-          ls -d /Applications/Xcode*.app || true
-          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
-          sudo xcode-select -s "$newest"
-          xcodebuild -version
-          swift --version
-
-      # MiniWatts uses `nonisolated` on type and extension declarations and
-      # SWIFT_DEFAULT_ACTOR_ISOLATION, so an older toolchain fails deep in the
-      # compile with errors that do not name the real cause. Say it up front.
-      - name: Check toolchain
-        run: |
-          required=6.2
-          found=$(swift -version 2>&1 | sed -n 's/.*Swift version \([0-9][0-9.]*\).*/\1/p' | head -1)
-          echo "Swift $found (need $required or newer)"
-          if [ "$(printf '%s\n%s\n' "$required" "$found" | sort -V | head -1)" != "$required" ]; then
-            echo "::error::Swift $found is too old. This project needs Swift $required or newer; pin a runner image that ships it."
-            exit 1
-          fi
-
-      # Xcode 27 beta writes `objectVersion = 110` on save, and no released Xcode —
-      # so no runner — can open that. The failure from xcodebuild is "a future Xcode
-      # project file format", which does not say what to do about it. Say it here.
-      - name: Check project format
-        run: |
-          max=77
-          found=$(sed -n 's/^[[:space:]]*objectVersion = \([0-9]*\);/\1/p' MiniWatts.xcodeproj/project.pbxproj)
-          echo "project objectVersion $found (max readable by a released Xcode: $max)"
-          if [ "$found" -gt "$max" ]; then
-            echo "::error::project.pbxproj is at objectVersion $found, which only an Xcode beta can read. Xcode re-upgraded the project format on save. In Xcode: select the project, File inspector, Project Format -> Xcode 16.0-compatible; or set objectVersion back to $max by hand. Nothing in this project needs a format newer than $max."
-            exit 1
-          fi
+      - name: Set up Xcode
+        id: xcode
+        uses: ./.github/actions/setup-xcode
 
       # On a tag, the tag is the version: build-ipa.sh hands MARKETING_VERSION to
       # xcodebuild, so the project file never has to be edited to cut a release. Taken
@@ -77,12 +129,27 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: echo "MARKETING_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      - name: Cache device Release compilation
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/DerivedData/Build
+            build/DerivedData/ModuleCache.noindex
+            build/DerivedData/SDKStatCaches.noindex
+            build/DerivedData/CompilationCache.noindex
+          key: ${{ runner.os }}-${{ runner.arch }}-device-release-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('MiniWatts.xcodeproj/**', 'scripts/build-ipa.sh', '.github/actions/setup-xcode/action.yml') }}-${{ hashFiles('MiniWatts/**', 'Widget/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-device-release-v1-${{ steps.xcode.outputs.fingerprint }}-${{ hashFiles('MiniWatts.xcodeproj/**', 'scripts/build-ipa.sh', '.github/actions/setup-xcode/action.yml') }}-
+
       - name: Build unsigned ipa
         run: ./scripts/build-ipa.sh
 
+      - name: Verify app and widget identity
+        run: python3 scripts/verify-identity.py build/export/MiniWattsPro-unsigned.ipa
+
       # Nothing about the machine that produced the build may reach the artifact.
       - name: Verify the ipa carries no identifying data
-        run: ./scripts/verify-clean.sh build/export/MiniWatts-unsigned.ipa
+        run: ./scripts/verify-clean.sh build/export/MiniWattsPro-unsigned.ipa
 
       # The version reaches the bundle only as a build-setting override. If that ever
       # stops working, a release named v1.2.0 would quietly ship a binary saying 1.0.
@@ -90,7 +157,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           work=$(mktemp -d)
-          unzip -q build/export/MiniWatts-unsigned.ipa -d "$work"
+          unzip -q build/export/MiniWattsPro-unsigned.ipa -d "$work"
           plist="$(ls -d "$work"/Payload/*.app)/Info.plist"
           built=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")
           number=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")
@@ -101,10 +168,12 @@ jobs:
           fi
 
       - name: Upload ipa
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: MiniWatts-unsigned-ipa
-          path: build/export/MiniWatts-unsigned.ipa
+          path: build/export/MiniWattsPro-unsigned.ipa
+          # Download the IPA itself so iOS users do not need to unpack an
+          # outer artifact ZIP before importing it into their signing tool.
+          archive: false
           if-no-files-found: error
 
       # Kept separately: the ipa is stripped, so a crash report needs this to
@@ -124,14 +193,14 @@ jobs:
       # disagrees with its source on any of them.
       - name: Write the app source
         if: startsWith(github.ref, 'refs/tags/v')
-        run: python3 scripts/make-source.py build/export/MiniWatts-unsigned.ipa "$GITHUB_REF_NAME" > build/export/apps.json
+        run: python3 scripts/make-source.py build/export/MiniWattsPro-unsigned.ipa "$GITHUB_REF_NAME" > build/export/apps.json
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/export/MiniWatts-unsigned.ipa
+            build/export/MiniWattsPro-unsigned.ipa
             build/export/apps.json
           fail_on_unmatched_files: true
           generate_release_notes: true

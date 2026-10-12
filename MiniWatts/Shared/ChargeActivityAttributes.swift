@@ -20,6 +20,10 @@ nonisolated struct ChargeActivityContentState: Codable, Hashable {
     var hottestTemperature: Double?
     var hottestSensorName: String?
     var selectedMetric: LiveActivityMetric
+    /// Optional so an activity created by an older build still decodes on upgrade.
+    var observationPaused: Bool? = nil
+
+    var isPaused: Bool { observationPaused == true }
 
     var date: Date { reading.date }
     var batteryTemperature: Double? { reading.batteryTemperature }

@@ -1,4 +1,4 @@
-# MiniWatts
+# MiniWatts Pro
 
 Sideload-only iPhone battery instrument. Private APIs; never App Store safe.
 
@@ -22,11 +22,19 @@ by several entries.
 - `TEAM_ID=… ./scripts/build-ipa.sh signed` — for your own device. No default team
   lives in this repo; `DEVELOPMENT_TEAM` is empty in the pbxproj and Xcode will
   write yours back into it if you pick one in the UI. Do not commit that.
-- `.github/workflows/build.yml` builds, verifies and (on a `v*` tag) releases. CI pins an
-  older Xcode than a development Mac usually runs, and the two compilers disagree:
+- `.github/workflows/build.yml` builds, verifies and (on a `v*` tag) releases. CI selects
+  the newest Xcode on the runner; it can differ from a development Mac's compiler:
   v1.3.0's first tag failed on a Swift 6 sending error that Xcode 27 accepted and CI's
-  Xcode 26.6 did not. A clean local `build-ipa.sh` is not enough — run the workflow by
-  hand (`gh workflow run build.yml --ref master`) and tag only once it is green.
+  Xcode 26.6 did not. All compilation and automated tests run in Actions — run the
+  workflow (`gh workflow run build.yml --ref codex/miniwatts-pro-analysis`) and tag
+  only once it is green.
+- CI runs report/model tests and application UI tests on separate macOS runners in
+  parallel; the IPA job depends on both. `.github/actions/setup-xcode` shares toolchain
+  checks and emits an Xcode/Swift/SDK/macOS fingerprint. Compilation caches are split
+  by target/configuration and source/configuration hashes; do not cache simulator
+  user data, test results or packaged artifacts, and never skip tests on cache hits.
+  A source branch shares its push/PR/manual concurrency group so duplicate runs
+  cannot consume both simulator runners; different version tags stay independent.
 - The simulator reads the **Mac's** battery through IOKit and has no HID sensors:
   fine for layout and for the adapter/PD panels, useless for anything sensor-driven.
 
@@ -44,8 +52,8 @@ by several entries.
   temperature four times did four linear scans and called `SensorCatalog.zone(for:)`
   (which lowercases and splits) once per sensor per scan. Registry lookups stay
   computed: those are single hash hits. Also here:
-  `EnergyAccumulator` integrates ∫V·I dt; `ChargeSession` + `SessionStore` persist charges
-  as one JSON file in Application Support.
+  `EnergyAccumulator` integrates ∫V·I dt; `ChargeSession` + the `SessionStore` actor persist versioned per-session JSON files
+  and a rebuildable summary index in Application Support. Complete samples load on demand.
 - `Core/PowerMonitor.swift` — `@Observable`, 1 s tick, drives everything and owns session
   lifecycle. Injected once in `MiniWattsApp`, read via `@Environment(PowerMonitor.self)`.
   `headline` lives here rather than on the snapshot: its last fallback is the %-rate
@@ -103,11 +111,20 @@ foreground. Three things make that work and they are easy to undo by accident:
   recorded. UIKit stays in the view layer; `Core` only holds the preference. The other
   way to keep the tick alive is the floating meter, which runs through a locked screen.
 
-`SessionStore` encodes and writes on its own serial queue, coalescing bursts, and the
-load in `PowerMonitor.init` is a `Task`. At the ceiling — 60 sessions × 1,500 samples —
-the file is several megabytes, and doing that inline was a stall before the first frame
-and again every thirty seconds during a charge. `persist()` is a no-op until `isLoaded`,
-or a save landing before the load would truncate the history to nothing.
+`SessionStore` serializes disk work on its actor, stores all five-second points and all
+sessions, and writes only the changed session plus an index without full curves. It
+reports failures, rebuilds stale/corrupt indexes from independent session files and
+preserves damaged sessions separately. Current records are protected from history
+cleanup. An unfinished record is closed at its last observed timestamp after a crash.
+
+`ChargePredictor` uses recent complete percent transitions and same-device,
+same-transport historical five-percent segments. Missing level, holds and observation
+gaps stop active prediction; the target defaults to 100% and is not a system charge
+limit. `ChargeAnalysis` supplies the same calculations for UI and reports. Keep this
+pure model layer independent of UIKit so GitHub Actions can test it directly.
+
+All compilation runs in GitHub Actions, including model tests and iOS builds. The
+development branch triggers the workflow; only a `v*` tag publishes a release.
 
 ## Localization
 
@@ -284,7 +301,7 @@ exactly that reason.
 **The extension reads the sensors itself.** `ReadingProbe` runs the app's IOKit and HID code
 at every timeline refresh. It keeps a single `HIDSensors` for the life of the process: a
 second client in one process reads NaN, and the extension's process can outlive a refresh.
-The App Group file the app writes (`WidgetSnapshot`, `group.org.zhaohe.MiniWatts`) is a
+The App Group file the app writes (`WidgetSnapshot`, `group.io.github.ccatq.MiniWattsPro`) is a
 fallback plus the last finished charge, and may not exist at all — re-signing tools differ
 on whether they carry an App Group entitlement over, and AltStore only grants custom
 entitlements to a handful of apps. Everything that reads it treats `nil` as normal.
@@ -302,7 +319,7 @@ says when its numbers were taken, and whether the extension read them or the app
 **The live activity is driven by the app alone.** No push updates: those need an APNs server
 and a certificate tied to a developer team, and a re-signed copy could never receive them.
 So `ChargeActivityController` starts an activity only while the app is in front; sends an
-update at most every 5 s and at least every 20 s; gives each update a stale date 45 s out, so
+update at most every 1 s for changed displayed readings and at least every 20 s; gives each update a stale date 45 s out, so
 a suspended app's last reading is shown as paused rather than as current; ends the activity
 two minutes after unplugging, or at once if the setting is turned off; and adopts an activity
 left over from a killed run instead of starting a second one. All of that needs the app to be
@@ -456,7 +473,7 @@ every registered device** — five of them, in the build checked. Never publish 
 **The app source** (SideStore, AltStore, LiveContainer's bundled SideStore) is
 `apps.json`, written by `scripts/make-source.py` from the release's ipa and attached to
 the release by CI. Users add
-`https://github.com/ResistanceTo/MiniWatts/releases/latest/download/apps.json`, which
+`https://github.com/Ccat-Q/MiniWatts-Pro/releases/latest/download/apps.json`, which
 GitHub redirects to the newest non-prerelease's copy — so the address never changes, beta
 tags never reach it, and no bot commits back to master. Version, build, size and privacy
 keys are read from the ipa, never typed: AltStore compares them with what it downloads and
@@ -545,14 +562,23 @@ second. Found by bisecting a test build that scrolls itself, with switches read 
 the launch environment (`xctrace record --env … --launch -- <bundle id>`): with the page
 content replaced by plain rows the CPU drawing went to 1 ms/s. Switching off the backdrop,
 the dial's shadow, its tick `Canvas` and the live chart, singly or all together, changed
-nothing. Switching off the digit roll alone took it from 116–180 ms/s to 11. Readouts
-snap now, the dial's included. Two more per-tick costs were measured there: the floating
+nothing. Switching off the digit roll alone took it from 116–180 ms/s to 11. Those
+builds used snapping readouts, including the dial. Two more per-tick costs were
+measured there: the floating
 meter's frame (above) at 15–20 ms, and the sensor read and the rest of `refresh()` at
 about 5 ms.
 
-Already removed: `contentTransition(.numericText())` on every readout, the dial's last
-(see above), and the heat map's 0.6 s animation, which was retriggered every second on a
-`blur` + `plusLighter` layer. The grid `Canvas` is `.drawingGroup()`-rasterised.
+The original fix removed `contentTransition(.numericText())` on every readout and
+the heat map's 0.6 s animation, which was retriggered every second on a `blur` +
+`plusLighter` layer. The grid `Canvas` is `.drawingGroup()`-rasterised.
+
+MiniWatts Pro now restores digit rolling at the user's request. `ReadoutTransition`
+limits it to the displayed number and 0.18 seconds; no animation is attached to the
+dial's entire view. The arcs now have their own 0.28-second progress animations,
+including initial presentation. Reduce Motion and missing/non-numeric values use identity transitions.
+`ReadoutScrollMotion` pauses them through dragging and deceleration on iOS 18+;
+iOS 17 retains the local short transitions. These safeguards have not been
+profiled on a device, so the old measurements do not establish the new CPU cost.
 
 Deliberately kept despite the cost, as design decisions: the `Backdrop`'s full-screen
 `plusLighter` glow, and `PowerRing`'s `.shadow` on a stroked arc. Both were switched off
@@ -582,12 +608,17 @@ Profiler.
   integrates a rail only over intervals where both ends were read. Files written before
   v1.5.0 stored a missing input as 0, so "was the adapter side measured" is asked of the
   totals (`measuredInputWattHours`), never of the samples.
-- **`EnergyTotals` keeps a paired total.** Efficiency ("Cell share") and the remainder
+- **`EnergyTotals` keeps a paired total.** Conversion efficiency (the cell share) and the remainder
   ("Load + loss") come from `pairedInputWattHours` / `pairedBatteryWattHours`, the energy
   over intervals where *both* rails answered. Dividing the two full totals compares
   stretches of different length whenever one rail drops out. `integratedSeconds` is every
   watched interval, whichever rails answered — History sets it against the session's
   length — and the per-rail coverage is in the `…MeasuredSeconds` fields.
+- **`ChargeEfficiency` defines both visible ratios.** Instantaneous efficiency uses
+  measured input above 0.5 W and nonnegative incoming battery power; a real zero or
+  discharge yields 0%, while absent/non-finite readings stay unavailable. Cumulative
+  efficiency uses paired energies above 0.001 Wh. Dashboard, history, PDF and CSV
+  share this calculation. Phone load affects the ratio; it does not isolate the IC.
 - **The remainder is not heat.** Input minus what reaches the cell is the phone's own load
   plus conversion loss, so it is labelled "Load + loss", never "lost as heat".
 - **Hold state has three values.** `.unknown` means no battery-current reading at all, not
@@ -600,8 +631,17 @@ Profiler.
   inside the hole.
 - **An unreadable history file is moved aside**, to `charge-sessions.corrupt-<time>.json`,
   and Raw data says so. Moved, not copied, or every launch sets aside another one.
-- A build older than v1.5.0 cannot read a v1.5.0 history file (optional samples), and
-  would overwrite it. Nothing to do about that from here; it only bites on a downgrade.
+- MiniWatts Pro uses independent bundle and App Group identifiers and a versioned
+  history format. It does not import the original MiniWatts history.
+- **Completion ETA stops on interruption.** `ChargePredictor` is separate from the
+  legacy watts-from-percentage estimator described above. Pausing resets its current
+  trend and breaks energy/thermal observation; history uses complete, >=90%-observed
+  segments, with three distinct records per 5% segment. Coverage is checked in the
+  selected interval, independently of missing data outside that interval.
+- **Reports share the model calculations.** `ReportGenerator` contains UIKit PDF
+  drawing and CSV output that loads one immutable finished session at a time; `ReportExportController` owns the UI task and
+  system sharing. Actions runs the real renderer on an iOS simulator in English and
+  Chinese, checking pagination, common totals, empty selections and cancellation.
 
 Checked in the simulator only, where the Mac's battery stands in: the wired input side —
 "Load + loss", "Cell share", the input line on the charts — has not been seen on a device
@@ -618,3 +658,25 @@ since these changes.
   numbers come from and mark inferred values as inferred — charging holds are inferred
   from behaviour, and labelled that way.
 - User-facing copy stays in the app's voice; selector-level detail belongs in Raw data.
+
+Charge comparison energy/mean power use differences between cumulative live totals
+at fully observed percent boundaries. `ChargeRangeMetrics` combines these percent
+steps for UI/PDF/CSV; recorded interval peaks and temperatures use saved samples.
+Date-range aggregates include all available measurements and show overall coverage.
+
+
+### Prediction and ActivityKit interaction regressions
+
+`PowerMonitor.chargeTarget` uses a tracked private backing field. Self-assignment
+inside an `@Observable` stored property's `didSet` re-enters the generated setter;
+it must not be used for clamping. Target changes update the current record and ETA
+immediately. Collecting predictions report continuous duration and observed
+increases; two rises, or sufficient history for every required segment, are still
+required. The model tests and application UI target both run only on Actions.
+
+`ChargeActivityController` serializes submissions and forces pause/resume through
+its one-second gate. `observationPaused` is optional for old activity decoding.
+Without PiP, backgrounding publishes paused content and stops sampling; compact
+and expanded presentations show a pause indicator / unavailable readings.
+Returning foreground forces the first fresh tick. PiP stopping in the background
+also stops sampling. A local Live Activity cannot keep a suspended app executing.
