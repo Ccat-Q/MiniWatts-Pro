@@ -262,7 +262,7 @@ import Foundation
         let measuredHistory = ChargePowerHistory(sessions: histories, model: "test", wireless: false)
         let calibrated = powerResult(model: "test", history: measuredHistory, energy: nil)
         check(calibrated.state == .estimating && calibrated.usesHistoricalEnergy
-              && abs(calibrated.referenceSeconds! - 1440) < 0.001,
+              && abs(calibrated.referenceSeconds! - 2880) < 0.001,
               "Measured local energy can calibrate power forecasts without a guessed battery capacity")
         check(ChargePowerHistory(sessions: [taper[0], taper[0], taper[0]], model: "test", wireless: false).rates[16] == nil,
               "Duplicated history IDs cannot qualify a segment")
