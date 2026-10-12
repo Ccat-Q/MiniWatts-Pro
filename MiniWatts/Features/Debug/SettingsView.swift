@@ -230,10 +230,17 @@ struct SettingsView: View {
                     Stepper("", value: capacity, in: 5...40, step: 0.1)
                         .labelsHidden()
                 }
-                Text("Used only for the %-rate estimate, which is the sole way to see discharge power: no discharge-current sensor is exposed to a sandboxed app. Look up your model's rating — an iPhone 17 Pro Max is about 19.7 Wh — and enter it here.")
+                Text("Used for the %-rate power readout and, when selected, the power-based charge forecast. Automatic prediction uses reported capacity or the verified iPhone 17 rating with measured cell voltage. The untouched 15 Wh default is not treated as measured capacity.")
                     .font(.caption)
                     .foregroundStyle(Color.mwMuted)
                     .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("Automatic capacity") { monitor.selectPowerPredictionCapacity(configured: false) }
+                        .tint(monitor.usesConfiguredPowerCapacity ? .mwMuted : .mwAccent)
+                    Button("Use entered Wh") { monitor.selectPowerPredictionCapacity(configured: true) }
+                        .tint(monitor.usesConfiguredPowerCapacity ? .mwAccent : .mwMuted)
+                }
+                .buttonStyle(.bordered)
                 if let designCapacity = monitor.snapshot.designCapacity, designCapacity > 0 {
                     EmptyNote(text: "IOKit reported a design capacity of \(designCapacity) mAh on this system, so that value is being used instead.",
                               systemImage: "checkmark.circle")

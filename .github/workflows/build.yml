@@ -51,7 +51,7 @@ jobs:
       - name: Test analysis models and storage
         run: |
           mkdir -p build/AnalysisModuleCache
-          xcrun swiftc -swift-version 6 -parse-as-library -module-cache-path build/AnalysisModuleCache MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/LiveActivityUpdateGate.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
+          xcrun swiftc -swift-version 6 -parse-as-library -module-cache-path build/AnalysisModuleCache MiniWatts/Core/Model/ChargeEfficiency.swift MiniWatts/Core/Model/LiveActivityUpdateGate.swift MiniWatts/Core/Model/ChargePowerPredictor.swift MiniWatts/Core/Model/EnergyTotals.swift MiniWatts/Core/Model/ChargeSession.swift MiniWatts/Core/Model/ChargeAnalysis.swift MiniWatts/Core/Model/SessionStore.swift MiniWatts/Core/Model/ReportCSV.swift Tests/AnalyticsTests.swift -o build/analysis-tests
           build/analysis-tests
 
       - name: Test PDF and CSV exports in iOS simulator

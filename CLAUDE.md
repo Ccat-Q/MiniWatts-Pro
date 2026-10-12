@@ -670,9 +670,19 @@ Date-range aggregates include all available measurements and show overall covera
 `PowerMonitor.chargeTarget` uses a tracked private backing field. Self-assignment
 inside an `@Observable` stored property's `didSet` re-enters the generated setter;
 it must not be used for clamping. Target changes update the current record and ETA
-immediately. Collecting predictions report continuous duration and observed
-increases; two rises, or sufficient history for every required segment, are still
-required. The model tests and application UI target both run only on Actions.
+immediately. Percentage predictions report continuous duration and observed
+increases; two rises, or sufficient history for every required segment, are required.
+Gauge corrections clear slopes without marking electrical observation interrupted;
+the first fresh sample after a real gap resumes collection.
+
+`ChargePowerPredictor` separately averages up to 30 seconds of measured positive
+cell watts, requiring two samples spanning at least four seconds. It shows a
+constant-power reference and a scoped local/laboratory slowdown model, never adapter
+nameplate watts. Local measured segment energy can calibrate its energy assumption;
+otherwise capacity sources are explicit and untouched defaults are unavailable.
+Model provenance and limitations are in `docs/charging-prediction-data.md`. Completed
+history caches are rebuilt on mutation, not each sensor tick. The model tests and
+application UI target both run only on Actions.
 
 `ChargeActivityController` serializes submissions and forces pause/resume through
 its one-second gate. `observationPaused` is optional for old activity decoding.

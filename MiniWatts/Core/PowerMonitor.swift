@@ -19,7 +19,9 @@ final class PowerMonitor {
     private(set) var snapshot = PowerSnapshot()
     private(set) var live: [LiveSample] = []
     private(set) var devices: [ExternalBatteryDevice] = []
-    private(set) var sessions: [ChargeSession] = []
+    private(set) var sessions: [ChargeSession] = [] {
+        didSet { rebuildPowerHistory() }
+    }
     private(set) var currentSession: ChargeSession?
     private(set) var sessionTotals = EnergyTotals()
     /// Watts estimated from how fast the percentage moves. The only way to see
@@ -42,6 +44,7 @@ final class PowerMonitor {
     private(set) var historyError: String?
     private(set) var historyBytes: Int64 = 0
     private(set) var chargeETA = ChargeETA(state: .unplugged)
+    private(set) var powerChargeETA = ChargePowerETA(state: .unplugged)
     var chargeTarget: Int {
         get { storedChargeTarget }
         set {
@@ -102,7 +105,20 @@ final class PowerMonitor {
     }
 
     var configuredBatteryWattHours: Double {
-        didSet { UserDefaults.standard.set(configuredBatteryWattHours, forKey: Self.wattHoursKey) }
+        didSet {
+            UserDefaults.standard.set(configuredBatteryWattHours, forKey: Self.wattHoursKey)
+            usesConfiguredPowerCapacity = true
+            UserDefaults.standard.set(true, forKey: Self.powerCapacityKey)
+            updateETA()
+        }
+    }
+    private(set) var usesConfiguredPowerCapacity: Bool
+
+    func selectPowerPredictionCapacity(configured: Bool) {
+        guard !configured || (configuredBatteryWattHours.isFinite && (5...40).contains(configuredBatteryWattHours)) else { return }
+        usesConfiguredPowerCapacity = configured
+        UserDefaults.standard.set(configured, forKey: Self.powerCapacityKey)
+        updateETA()
     }
 
     var sensorsAvailable: Bool { sensorServiceCount > 0 }
@@ -112,6 +128,7 @@ final class PowerMonitor {
 
     private static let nominalCellVoltage = 3.87
     private static let wattHoursKey = "batteryWattHours"
+    private static let powerCapacityKey = "powerPredictionUsesConfiguredCapacity"
     private static let keepAwakeKey = "keepScreenAwakeWhileCharging"
     private static let liveActivityKey = "showsLiveActivityWhileCharging"
     private static let liveActivityMetricKey = "liveActivityMetric"
@@ -128,6 +145,9 @@ final class PowerMonitor {
     private let resistance = PathResistanceMeter()
     private let store = SessionStore()
     private let predictor = ChargePredictor()
+    private let powerPredictor = ChargePowerPredictor()
+    @ObservationIgnored private var wiredPowerHistory = ChargePowerHistory()
+    @ObservationIgnored private var wirelessPowerHistory = ChargePowerHistory()
     private var storedChargeTarget: Int
     private var lastSessionObservation: Date?
     private var lastSessionPercent: Int?
@@ -167,6 +187,8 @@ final class PowerMonitor {
         let target = defaults.integer(forKey: "chargeTarget")
         storedChargeTarget = (50...100).contains(target) ? target : 100
         let stored = defaults.double(forKey: Self.wattHoursKey)
+        usesConfiguredPowerCapacity = defaults.object(forKey: Self.powerCapacityKey) as? Bool
+            ?? (defaults.object(forKey: Self.wattHoursKey) != nil && stored.isFinite && (5...40).contains(stored))
         configuredBatteryWattHours = stored > 0 ? stored : 15.0
         // Defaults to on: recording a whole charge is the point of the History tab,
         // and it cannot happen if the screen locks after thirty seconds.
@@ -222,7 +244,9 @@ final class PowerMonitor {
         energy.breakObservation()
         lastThermalObservationDate = nil
         predictor.reset(interrupted: true)
+        powerPredictor.reset(interrupted: true)
         chargeETA = ChargeETA(state: .interrupted)
+        powerChargeETA = ChargePowerETA(state: .interrupted)
         persist()
     }
 
@@ -259,6 +283,9 @@ final class PowerMonitor {
         updateSession(current)
         predictor.observe(date: current.date, percent: current.percent, connected: current.externalConnected,
                           charging: current.isCharging)
+        powerPredictor.observe(date: current.date, watts: current.batteryWatts,
+                               connected: current.externalConnected, charging: current.isCharging,
+                               wireless: current.isWirelessInput)
         updateETA()
         lastExternalConnected = current.externalConnected
         onTick?(current)
@@ -336,13 +363,14 @@ final class PowerMonitor {
         session.endPercent = snapshot.percent
         session.lastObserved = snapshot.date
         session.targetPercent = chargeTarget
-        if let previous = lastSessionObservation, snapshot.date.timeIntervalSince(previous) > 10 {
-            pendingObservationBreak = true
+        if let previous = lastSessionObservation {
+            let gap = snapshot.date.timeIntervalSince(previous)
+            if gap <= 0 || gap > 10 { pendingObservationBreak = true }
         }
         if lastSessionObservation != nil {
             if (snapshot.percent == nil) != (lastSessionPercent == nil) { pendingObservationBreak = true }
-            if let percent = snapshot.percent, let previous = lastSessionPercent,
-               percent < previous || percent - previous > 1 { pendingObservationBreak = true }
+            // Percentage corrections do not interrupt electrical observation.
+            // ChargeAnalysis.steps independently excludes discontinuous SOC spans.
         }
         lastSessionObservation = snapshot.date
         lastSessionPercent = snapshot.percent
@@ -406,6 +434,7 @@ final class PowerMonitor {
         sessions.insert(session.summary(), at: 0)
         saveSession(session)
         predictor.reset()
+        powerPredictor.reset()
     }
 
     private func persist() {
@@ -445,10 +474,27 @@ final class PowerMonitor {
     }
 
     private func updateETA() {
+        let now = Date.now
         chargeETA = predictor.estimate(percent: snapshot.percent, target: chargeTarget,
                                       connected: snapshot.externalConnected, charging: snapshot.isCharging,
                                       wireless: snapshot.isWirelessInput, model: deviceModelIdentifier,
-                                      history: sessions, now: snapshot.date)
+                                      history: sessions, now: now)
+        let capacity = ChargePowerCapacity.resolve(model: deviceModelIdentifier,
+                                                  maximumMAh: snapshot.maxCapacity,
+                                                  designMAh: snapshot.designCapacity,
+                                                  voltage: snapshot.batteryVoltage,
+                                                  configuredWh: usesConfiguredPowerCapacity ? configuredBatteryWattHours : nil)
+        powerChargeETA = powerPredictor.estimate(percent: snapshot.percent, target: chargeTarget,
+                                               connected: snapshot.externalConnected, charging: snapshot.isCharging,
+                                               model: deviceModelIdentifier, wireless: snapshot.isWirelessInput,
+                                               capacity: capacity,
+                                               history: snapshot.isWirelessInput ? wirelessPowerHistory : wiredPowerHistory,
+                                               now: now)
+    }
+
+    private func rebuildPowerHistory() {
+        wiredPowerHistory = ChargePowerHistory(sessions: sessions, model: deviceModelIdentifier, wireless: false)
+        wirelessPowerHistory = ChargePowerHistory(sessions: sessions, model: deviceModelIdentifier, wireless: true)
     }
 
     /// Every recorded session on the same adapter that produced a path-resistance

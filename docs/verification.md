@@ -8,7 +8,7 @@
 | 功能 | 实现 |
 | --- | --- |
 | 独立应用、小组件与共享组 | Xcode 工程、两个 entitlements、`WidgetSnapshot` |
-| 默认 100% 的可调目标与剩余时间状态 | `ChargePredictor`、`PowerMonitor`、`ChargePredictionPanel` |
+| 默认 100% 的可调目标与剩余时间状态 | `ChargePredictor`、`ChargePowerPredictor`、`PowerMonitor`、`ChargePredictionPanel` |
 | 完整采样、摘要索引、恢复及清理 | `ChargeSession`、`SessionStore` |
 | 日期筛选、加权汇总与同电量区间指标 | `ChargeAnalysis`、`ChargeRangeMetrics`、`SessionsView` |
 | 单次与日期范围报告 | `ReportGenerator`、`ReportCSV`、`ReportExportController` |
@@ -27,7 +27,8 @@
 - `Tests/AnalyticsTests.swift`：完整电量边界、90% 覆盖资格、区间外缺口、区间功率/能量/温度、能量加权、缺测与实测零值、日期筛选、历史与本次趋势、尾段减速、目标变化、暂停与观测中断。
 - 同一模型测试验证瞬时与累计转换效率、实测零值/净放电、低输入、非有限读数、100% 显示边界，以及同期能量和跨会话能量加权；报告测试检查中英文效率名称及同期计量说明。
 - 模型测试遍历全部 50%–100% 目标，检查积累进度、非法电量及未来观测；本地实时活动限频测试覆盖变化读数、心跳、暂停／恢复强制提交与系统时间变化。
-- `UITests/ChargingInteractionTests.swift` 在真实应用进程点击 80%／90%／100% 快捷按钮和 Stepper 加减控件，检查 50%／100% 边界、连续点击不崩溃、重启后保留目标及前后台往返。由 `scripts/test-interactions.sh` 在 Actions 运行，并保留 `.xcresult`、日志和截图；补充纯计算测试无法覆盖的 Observation setter 与 SwiftUI 绑定。
+- 功率模型测试覆盖无电量上升时估算、电量跳变不打断功率、真实缺口后重建、时间加权平均、容量来源、本地能量校准、重复/不足历史、标准版 iPhone 17 的 80%/90% 尾段，以及机型/有线/无线隔离；异常功率不能沿用旧值。
+- `UITests/ChargingInteractionTests.swift` 验证功率预测与电量趋势的独立标题，在真实应用进程点击 80%／90%／100% 快捷按钮和 Stepper 加减控件，检查 50%／100% 边界、连续点击不崩溃、重启后保留目标及前后台往返。由 `scripts/test-interactions.sh` 在 Actions 运行，并保留 `.xcresult`、日志和截图；补充纯计算测试无法覆盖的 Observation setter 与 SwiftUI 绑定。
 - 同一模型测试验证超过 60 次会话与超过 1,500 点仍完整保存、未结束会话保护、强退恢复、索引重建、损坏会话隔离、写入失败及删除后延迟保存不会复活记录。
 - `Tests/ReportTests.swift` 与 `scripts/test-reports.sh`：在 iOS 模拟器运行真实 PDF/CSV 生成器，验证中英文、分页、统一汇总、完整采样行数、空范围、数据变化、生成前与生成中的取消、临时文件清理及页面渲染。
 - `scripts/verify-identity.py`：检查 IPA 内应用与小组件标识、显示名称、版本、iOS 17 部署目标和源配置共享组。
@@ -41,7 +42,9 @@
 
 产物：`MiniWattsPro-unsigned.ipa`、`MiniWatts-dSYM`、`report-test-fixtures`、`interaction-test-results`。IPA 使用 `actions/upload-artifact@v7` 的 `archive: false` 上传，浏览器直接下载 IPA，不再套一层需要解压的 ZIP；旧运行的 ZIP 不受此配置变更影响。报告测试产物来自合成数据，包含中英文单次/区间 PDF、两类 CSV 和页面预览，并非真实设备的充电报告。
 
-## 本轮 Actions 验收记录
+## 上一轮 Actions 验收记录
+
+以下记录属于实时功率预测追加前的版本，不能作为新增模型的通过证明。
 
 2026-10-11，提交 `2f330c61fd58dd95843db86fb99cca8a0fb30e3a` 的[完整运行](https://github.com/Ccat-Q/MiniWatts-Pro/actions/runs/38182689659)通过：模型／存储、中英文 PDF／CSV、真实应用预测控件与目标保存、前后台往返，以及 IPA 身份和隐私检查。报告 job 为 3 分 59 秒，UI job 为 9 分 9 秒，IPA job 为 1 分 43 秒；时长包含模拟器启动、测试及上传，不能据此承诺固定加速比例。
 
@@ -52,7 +55,7 @@
 Actions 成功证明源码可编译及合成数据规则通过，不证明私有传感器在所有机型上的含义或预测误差。安装后仍需检查：
 
 1. 与 MiniWatts 共存、签名后的 App Group 共享、小组件和实时活动。
-2. 暂停/恢复、锁屏或浮窗时的实际采样，以及基于真实记录的剩余时间误差。
+2. 暂停/恢复、锁屏或浮窗时的实际采样、电量跳变恢复，以及电芯功率与电量趋势两种预测的真实误差；重点检查 80%/90% 后尾段及系统优化充电暂停。实验满充端点可能不同于 UI 100%，以设备记录评估，不能承诺实验耗时。
 3. 明暗外观、中文和大字体的布局、长历史滚动。
 4. 系统分享面板的保存/分享/取消，以及清理后当前充电继续记录。
 5. 每秒数字更新时的真机 CPU 与滚动流畅度；iOS 18+ 滚动阶段暂停、iOS 17 局部动画、减少动态效果、缺测恢复及大字体布局。

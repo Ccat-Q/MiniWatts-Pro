@@ -13,6 +13,8 @@ final class ChargingInteractionTests: XCTestCase {
         let stepper = app.steppers["prediction.target"]
         XCTAssertTrue(stepper.waitForExistence(timeout: 15))
         if !stepper.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(app.staticTexts["prediction.power.heading"].exists)
+        XCTAssertTrue(app.staticTexts["prediction.trend.heading"].exists)
 
         func expectTarget(_ target: Int) {
             let predicate = NSPredicate(format: "value == %@", "\(target)%")
@@ -50,10 +52,23 @@ final class ChargingInteractionTests: XCTestCase {
         app.launchArguments = language
         app.launch()
         XCTAssertTrue(stepper.waitForExistence(timeout: 15))
+        if !stepper.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(stepper.isHittable)
         expectTarget(90)
         XCUIDevice.shared.press(.home)
+        // Wait for a real background transition before activating the app again.
+        // Immediate activation races the scene/scroll accessibility rebuild.
+        let background = NSPredicate(format: "state == %d OR state == %d",
+                                     XCUIApplication.State.runningBackground.rawValue,
+                                     XCUIApplication.State.runningBackgroundSuspended.rawValue)
+        let backgroundExpectation = XCTNSPredicateExpectation(predicate: background, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [backgroundExpectation], timeout: 10), .completed)
         app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
         XCTAssertTrue(stepper.waitForExistence(timeout: 15))
+        if !stepper.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(stepper.isHittable)
+        print("Resumed prediction target: \(stepper.debugDescription)")
         expectTarget(90)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Prediction controls after foreground resume"

@@ -161,18 +161,21 @@ nonisolated struct ChargeETA: Equatable, Sendable {
     var historyCount: Int = 0
     var observedIncreases: Int = 0
     var observationSeconds: TimeInterval = 0
+    var levelWasAdjusted: Bool = false
 }
 
 nonisolated final class ChargePredictor {
     private var previous: (date: Date, percent: Int)?
     private var changes: [(date: Date, percent: Int)] = []
     private var observationStart: Date?
+    private var levelWasAdjusted = false
     private(set) var interrupted = false
 
     func reset(interrupted: Bool = false) {
         previous = nil
         changes = []
         observationStart = nil
+        levelWasAdjusted = false
         self.interrupted = interrupted
     }
 
@@ -180,15 +183,24 @@ nonisolated final class ChargePredictor {
         guard connected, charging, let percent, (0...100).contains(percent) else { reset(); return }
         if let last = previous {
             let dt = date.timeIntervalSince(last.date)
-            if dt <= 0 || dt > 10 || percent < last.percent || percent - last.percent > 1 {
+            if dt == 0 { return }
+            if dt < 0 || dt > 10 {
                 reset(interrupted: true)
+            } else if percent < last.percent || percent - last.percent > 1 {
+                // A battery-gauge adjustment is not a gap in sensor observation.
+                // Discard the affected slope without inventing intermediate levels.
+                changes = []
+                observationStart = date
+                levelWasAdjusted = true
             } else if percent > last.percent {
                 changes.append((date, percent))
                 if changes.count > 7 { changes.removeFirst() }
-                interrupted = false
+                if changes.count >= 2 { levelWasAdjusted = false }
             }
         }
         previous = (date, percent)
+        // A fresh baseline resumes collection, including after a genuine gap.
+        interrupted = false
         if observationStart == nil { observationStart = date }
     }
 
@@ -203,7 +215,8 @@ nonisolated final class ChargePredictor {
             return ChargeETA(state: .interrupted)
         }
         let collecting = ChargeETA(state: .collecting, observedIncreases: changes.count,
-                                   observationSeconds: max(0, now.timeIntervalSince(observationStart ?? now)))
+                                   observationSeconds: max(0, now.timeIntervalSince(observationStart ?? now)),
+                                   levelWasAdjusted: levelWasAdjusted)
         var rate: Double?
         if changes.count >= 2, let first = changes.first, let last = changes.last, last.percent > first.percent {
             rate = last.date.timeIntervalSince(first.date) / Double(last.percent - first.percent)

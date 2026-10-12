@@ -75,10 +75,14 @@ is the only reason the app declares audio playback at all.
 ## Charge analysis and reports
 
 MiniWatts Pro installs alongside the original MiniWatts with its own history. Set a
-charge target from 50% to 100% (100% by default); remaining time combines the current
-percentage trend with comparable local history. Estimates show their basis, and stop
-when charging pauses or observation is interrupted. The target does not control iOS's
-charging limit.
+charge target from 50% to 100% (100% by default). Separate forecasts show the current
+cell-power reference and the percentage trend with comparable local history. Power
+estimates also show a slowdown correction when a matching local profile or the
+standard iPhone 17 wired laboratory prior is available, including the slower tail
+above 80%. Capacity assumptions and source limits are explicit; see the
+[prediction data notes](docs/charging-prediction-data.md). Level corrections rebuild
+the trend without stopping power sampling. Charging holds and real observation gaps
+stop effective estimates. The target does not control iOS's charging limit.
 
 Conversion efficiency shows the share of measured input reaching the cell: a live
 power ratio and a cumulative ratio of energies measured over matching intervals.
