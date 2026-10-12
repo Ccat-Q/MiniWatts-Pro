@@ -125,7 +125,8 @@ nonisolated final class ChargePowerPredictor {
         let reference = currentSecondsPerPercent * Double(target - percent)
         guard reference.isFinite, reference > 0 else { return ChargePowerETA(state: .noPower) }
         var result = ChargePowerETA(state: .estimating, referenceSeconds: reference,
-                                    averageWatts: power, capacity: capacity, observationSeconds: duration,
+                                    averageWatts: power, capacity: historicalEnergy == nil ? capacity : nil,
+                                    observationSeconds: duration,
                                     usesHistoricalEnergy: historicalEnergy != nil)
         let historyAnchor = history.rates[anchor]
         let laboratoryAnchor = Self.laboratoryRate(percent: percent, model: model, wireless: wireless)
