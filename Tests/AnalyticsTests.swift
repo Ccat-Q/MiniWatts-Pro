@@ -177,11 +177,123 @@ import Foundation
         check(hybrid.source == .hybrid && hybrid.seconds == 6480, "Historical tail segments capture taper beyond the current slope")
         predictor.observe(date: time.addingTimeInterval(131), percent: 52, connected: true, charging: true)
         check(predictor.estimate(percent: 52, target: 80, connected: true, charging: true, wireless: false,
-                                 model: "test", history: [], now: time.addingTimeInterval(131)).state == .interrupted, "A gap resets the current trend")
+                                 model: "test", history: [], now: time.addingTimeInterval(131)).state == .collecting, "A fresh sample after a gap resumes collection, without reusing the old trend")
         check(predictor.estimate(percent: nil, target: 80, connected: true, charging: true, wireless: false,
                                  model: "test", history: [], now: time).state == .noReading, "Missing percent remains missing")
         check(predictor.estimate(percent: 52, target: 80, connected: true, charging: false, wireless: false,
                                  model: "test", history: [], now: time).state == .paused, "A paused charge cannot show a countdown")
+        predictor.reset()
+        for offset in 0...120 {
+            predictor.observe(date: time.addingTimeInterval(Double(offset)), percent: 50 + offset / 60,
+                              connected: true, charging: true)
+        }
+        predictor.observe(date: time.addingTimeInterval(121), percent: 54, connected: true, charging: true)
+        let adjusted = predictor.estimate(percent: 54, target: 80, connected: true, charging: true,
+                                         wireless: false, model: "test", history: [], now: time.addingTimeInterval(121))
+        check(adjusted.state == .collecting && adjusted.levelWasAdjusted && adjusted.seconds == nil,
+              "A level jump rebuilds the slope, not the electrical observation")
+        predictor.observe(date: time.addingTimeInterval(122), percent: 53, connected: true, charging: true)
+        check(!predictor.interrupted, "A downward gauge correction is not a sampling gap")
+        for offset in 123...241 {
+            predictor.observe(date: time.addingTimeInterval(Double(offset)), percent: 53 + (offset - 122) / 60,
+                              connected: true, charging: true)
+        }
+        predictor.observe(date: time.addingTimeInterval(242), percent: 55, connected: true, charging: true)
+        check(predictor.estimate(percent: 55, target: 80, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time.addingTimeInterval(242)).seconds == 1500,
+              "The trend recovers from new complete level intervals after adjustment")
+        predictor.observe(date: time.addingTimeInterval(242), percent: 55, connected: true, charging: true)
+        check(!predictor.interrupted, "An identical duplicate tick cannot interrupt observation")
+        predictor.reset(interrupted: true)
+        predictor.observe(date: time, percent: 50, connected: true, charging: true)
+        check(predictor.estimate(percent: 50, target: 80, connected: true, charging: true, wireless: false,
+                                 model: "test", history: [], now: time).state == .collecting,
+              "Foreground recovery does not wait for a percentage rise to clear interruption")
+
+        let rated = ChargePowerCapacity.resolve(model: "iPhone18,3", maximumMAh: nil, designMAh: nil,
+                                                voltage: 4, configuredWh: nil)
+        check(rated?.source == .iPhone17Rating && abs(rated!.wattHours - 14.768) < 0.00001,
+              "iPhone 17 uses verified mAh with measured voltage, not an unconfirmed default")
+        check(ChargePowerCapacity.resolve(model: "unknown", maximumMAh: nil, designMAh: nil,
+                                          voltage: 4, configuredWh: nil) == nil, "Unknown capacity stays unavailable")
+        check(ChargePowerCapacity.resolve(model: "iPhone18,3", maximumMAh: nil, designMAh: nil,
+                                          voltage: nil, configuredWh: nil) == nil, "No fabricated nominal voltage")
+        check(ChargePowerCapacity.resolve(model: "unknown", maximumMAh: 3000, designMAh: 4000,
+                                          voltage: 4, configuredWh: nil)?.source == .reportedMaximum,
+              "Reported full-charge capacity precedes design capacity")
+        check(ChargePowerCapacity.resolve(model: "iPhone18,3", maximumMAh: 3000, designMAh: nil,
+                                          voltage: nil, configuredWh: 20)?.source == .configured,
+              "An explicitly selected energy works without a reported voltage")
+        check(ChargePowerCapacity.resolve(model: "unknown", maximumMAh: nil, designMAh: nil,
+                                          voltage: .infinity, configuredWh: .nan) == nil,
+              "Nonfinite capacity inputs cannot create an energy assumption")
+        let powerPredictor = ChargePowerPredictor()
+        func powerResult(_ percent: Int = 70, _ target: Int = 100, model: String = "iPhone18,3",
+                         wireless: Bool = false, history: ChargePowerHistory = ChargePowerHistory(),
+                         energy: ChargePowerCapacity? = ChargePowerCapacity(wattHours: 20, source: .configured),
+                         now: Date? = nil) -> ChargePowerETA {
+            powerPredictor.estimate(percent: percent, target: target, connected: true, charging: true,
+                                    model: model, wireless: wireless, capacity: energy, history: history,
+                                    now: now ?? time.addingTimeInterval(4))
+        }
+        for offset in 0...4 {
+            powerPredictor.observe(date: time.addingTimeInterval(Double(offset)), watts: 10,
+                                   connected: true, charging: true, wireless: false)
+        }
+        let powerForecast = powerResult()
+        check(powerForecast.referenceSeconds == 2160 && powerForecast.averageWatts == 10,
+              "Cell power predicts without any charge-level rise")
+        check(powerForecast.source == .laboratory && abs(powerForecast.correctedSeconds! - 5644.8) < 0.001,
+              "The sourced laboratory shape includes slower 80–90 and 90–100 tails")
+        check(powerResult(70, 80).referenceSeconds == 720, "Target changes recompute power-based remaining charge")
+        check(abs(powerResult(80).correctedSeconds! - 2736) < 0.001,
+              "At 80 percent the forecast includes the still slower final ten percent")
+        check(powerResult(72).referenceSeconds == 2016, "A level jump updates remaining charge without resetting power")
+        check(powerResult(model: "unknown").correctedSeconds == nil, "A prior cannot leak to another model")
+        check(powerResult(energy: nil).state == .noCapacity, "Missing capacity cannot become a fabricated forecast")
+        check(powerResult(now: time.addingTimeInterval(15)).state == .interrupted, "Stale power stops forecasting")
+        check(powerResult(now: time.addingTimeInterval(3)).state == .interrupted, "Future power is not current")
+        let local = ChargePowerHistory(sessions: taper, model: "test", wireless: false)
+        let locallyCorrected = powerResult(model: "test", history: local)
+        check(locallyCorrected.source == .history && locallyCorrected.historyCount == 3
+              && locallyCorrected.correctedSeconds == 6480, "Local three-record segments override generic taper assumptions")
+        let partialHistory = ChargePowerHistory(sessions: Array(taper.prefix(2)), model: "test", wireless: false)
+        check(powerResult(model: "test", history: partialHistory).correctedSeconds == nil, "Two records are insufficient for history correction")
+        let measuredHistory = ChargePowerHistory(sessions: histories, model: "test", wireless: false)
+        let calibrated = powerResult(model: "test", history: measuredHistory, energy: nil)
+        check(calibrated.state == .estimating && calibrated.usesHistoricalEnergy
+              && abs(calibrated.referenceSeconds! - 1440) < 0.001,
+              "Measured local energy can calibrate power forecasts without a guessed battery capacity")
+        check(ChargePowerHistory(sessions: [taper[0], taper[0], taper[0]], model: "test", wireless: false).rates[16] == nil,
+              "Duplicated history IDs cannot qualify a segment")
+        check(ChargePowerHistory(sessions: histories, model: "other", wireless: false).energyPerPercent[14] == nil
+              && ChargePowerHistory(sessions: histories, model: "test", wireless: true).rates[14] == nil,
+              "Local energy and slowdown profiles cannot cross device or charging-way boundaries")
+        powerPredictor.observe(date: time.addingTimeInterval(5), watts: nil, connected: true, charging: true, wireless: false)
+        check(powerResult(now: time.addingTimeInterval(5)).state == .noPower, "Missing cell power clears older watts")
+        powerPredictor.observe(date: time.addingTimeInterval(6), watts: -1, connected: true, charging: true, wireless: false)
+        check(powerResult(now: time.addingTimeInterval(6)).state == .noPower, "Net discharge cannot predict charging")
+        for watts in [0.0, Double.nan, Double.infinity] {
+            powerPredictor.observe(date: time.addingTimeInterval(6), watts: watts, connected: true, charging: true, wireless: false)
+            check(powerResult(now: time.addingTimeInterval(6)).state == .noPower, "Invalid electrical readings remain unavailable")
+        }
+        for offset in 7...11 {
+            powerPredictor.observe(date: time.addingTimeInterval(Double(offset)), watts: 5,
+                                   connected: true, charging: true, wireless: true)
+        }
+        check(powerResult(wireless: true, now: time.addingTimeInterval(11)).correctedSeconds == nil,
+              "A wired laboratory curve cannot be used for wireless charging")
+        powerPredictor.reset()
+        powerPredictor.observe(date: time, watts: 10, connected: true, charging: true, wireless: false)
+        powerPredictor.observe(date: time.addingTimeInterval(4), watts: 6, connected: true, charging: true, wireless: false)
+        check(powerResult().averageWatts == 8, "Slow but continuous samples still form a time-weighted forecast")
+        powerPredictor.observe(date: time.addingTimeInterval(15), watts: 10, connected: true, charging: true, wireless: false)
+        check(powerResult(now: time.addingTimeInterval(15)).state == .collecting, "A genuine power gap rebuilds a fresh window")
+        check(powerPredictor.estimate(percent: 70, target: 100, connected: true, charging: false, model: "test", wireless: false,
+                                     capacity: nil, history: ChargePowerHistory(), now: time).state == .paused,
+              "System charging holds cannot be shown as an effective countdown")
+        check(powerPredictor.estimate(percent: 90, target: 80, connected: true, charging: false, model: "test", wireless: false,
+                                     capacity: nil, history: ChargePowerHistory(), now: time).state == .reached, "Reached targets need no capacity")
         check(ReportCSV.row(["a,b", "x\"y", "", "line\nbreak"]) == "\"a,b\",\"x\"\"y\",\"\",\"line\nbreak\"\r\n", "CSV escaping")
         check(ReportCSV.number(nil).isEmpty && ReportCSV.number(.nan).isEmpty, "CSV preserves missing values")
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

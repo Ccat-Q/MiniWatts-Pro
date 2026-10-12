@@ -4978,6 +4978,567 @@
           }
         }
       }
+    },
+    "Charge-level trend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge-level trend"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电量趋势预测"
+          }
+        }
+      }
+    },
+    "Power-based forecast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Power-based forecast"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "功率预测"
+          }
+        }
+      }
+    },
+    "At current cell power" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At current cell power"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按当前电芯功率"
+          }
+        }
+      }
+    },
+    "With charging slowdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With charging slowdown"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "考虑充电降速"
+          }
+        }
+      }
+    },
+    "Battery level adjusted — rebuilding the trend, sampling continues." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery level adjusted — rebuilding the trend, sampling continues."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电量已校正，正在重建趋势；功率采样继续。"
+          }
+        }
+      }
+    },
+    "Trend observation: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trend observation: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电量趋势观察时长：%@"
+          }
+        }
+      }
+    },
+    "Two continuous level rises establish the trend. Level corrections rebuild this model; fresh samples resume collection after background gaps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Two continuous level rises establish the trend. Level corrections rebuild this model; fresh samples resume collection after background gaps."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续两次电量上升后建立趋势。电量校正会重建此模型；后台缺口后收到新读数即恢复积累。"
+          }
+        }
+      }
+    },
+    "Observation interrupted — waiting for fresh readings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Observation interrupted — waiting for fresh readings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "观测中断，等待新读数"
+          }
+        }
+      }
+    },
+    "Local charging profile; %lld comparable records per segment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local charging profile; %lld comparable records per segment."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本地充电曲线；每段有 %lld 条可比记录。"
+          }
+        }
+      }
+    },
+    "Local profile + laboratory prior; a rough model estimate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local profile + laboratory prior; a rough model estimate."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本地曲线＋实验室参考模型；粗略估算。"
+          }
+        }
+      }
+    },
+    "iPhone 17 wired laboratory prior; a rough model estimate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 17 wired laboratory prior; a rough model estimate."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 17 有线实验室参考模型；粗略估算。"
+          }
+        }
+      }
+    },
+    "No complete matching slowdown profile. Actual time may be longer, especially above 80%." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No complete matching slowdown profile. Actual time may be longer, especially above 80%."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少完整、匹配的降速曲线；实际可能更久，尤其是 80% 以后。"
+          }
+        }
+      }
+    },
+    "Smoothed cell power: %@ W" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smoothed cell power: %@ W"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平滑电芯功率：%@ W"
+          }
+        }
+      }
+    },
+    "Above about 80%, charging slows. System holds or temperature limits can delay charging further; a hold has no predictable resume time." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Above about 80%, charging slows. System holds or temperature limits can delay charging further; a hold has no predictable resume time."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "约 80% 后充电会降速。系统暂停或温度限制可能继续延迟；暂停后的恢复时间无法预测。"
+          }
+        }
+      }
+    },
+    "Collecting a short continuous cell-power window; no level increase is required." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecting a short continuous cell-power window; no level increase is required."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在积累短时间连续电芯功率，无需等待电量上升。"
+          }
+        }
+      }
+    },
+    "Power model details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Power model details"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "功率模型依据"
+          }
+        }
+      }
+    },
+    "Capacity assumption: %@ Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity assumption: %@ Wh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "容量假设：%@ Wh"
+          }
+        }
+      }
+    },
+    "Reported full-charge capacity × cell voltage; approximate energy." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reported full-charge capacity × cell voltage; approximate energy."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统报告的满充容量×电芯电压，作为近似能量。"
+          }
+        }
+      }
+    },
+    "Reported design capacity × cell voltage; approximate energy." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reported design capacity × cell voltage; approximate energy."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统报告的设计容量×电芯电压，作为近似能量。"
+          }
+        }
+      }
+    },
+    "iPhone 17 rated 3692 mAh × measured cell voltage; approximate energy." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 17 rated 3692 mAh × measured cell voltage; approximate energy."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 17 标称 3692 mAh×实测电芯电压，作为近似能量。"
+          }
+        }
+      }
+    },
+    "User-configured battery energy; approximate capacity." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User-configured battery energy; approximate capacity."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户设置的电池能量，作为近似容量。"
+          }
+        }
+      }
+    },
+    "Remaining charge is approximated from the level and capacity. Current power is averaged over up to 30 seconds; this reference is not a guaranteed lower bound." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remaining charge is approximated from the level and capacity. Current power is averaged over up to 30 seconds; this reference is not a guaranteed lower bound."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余电荷由电量比例和容量近似计算。功率取最长 30 秒的平均值；参考时间并非保证的最短时间。"
+          }
+        }
+      }
+    },
+    "The laboratory prior describes one wired 25°C test. Its full-charge endpoint may differ from the displayed 100%. Unsupported models and wireless charging require local history." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The laboratory prior describes one wired 25°C test. Its full-charge endpoint may differ from the displayed 100%. Unsupported models and wireless charging require local history."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实验室模型来自一次 25℃有线测试；充满终点可能不同于系统显示 100%。其他机型和无线充电需要本地历史曲线。"
+          }
+        }
+      }
+    },
+    "Apple battery and charging data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple battery and charging data"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 电池与充电数据"
+          }
+        }
+      }
+    },
+    "Laboratory curve source" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laboratory curve source"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实验室曲线来源"
+          }
+        }
+      }
+    },
+    "Charging paused — resume time is unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging paused — resume time is unknown"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "充电已暂停，恢复时间未知"
+          }
+        }
+      }
+    },
+    "No positive cell-power reading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No positive cell-power reading"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少有效的正向电芯功率"
+          }
+        }
+      }
+    },
+    "Capacity unavailable — set battery energy in Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity unavailable — set battery energy in Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "容量不可用，请在设置中填写电池能量"
+          }
+        }
+      }
+    },
+    "Collecting cell-power samples…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecting cell-power samples…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在积累电芯功率样本…"
+          }
+        }
+      }
+    },
+    "Used for the %-rate power readout and, when selected, the power-based charge forecast. Automatic prediction uses reported capacity or the verified iPhone 17 rating with measured cell voltage. The untouched 15 Wh default is not treated as measured capacity." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used for the %-rate power readout and, when selected, the power-based charge forecast. Automatic prediction uses reported capacity or the verified iPhone 17 rating with measured cell voltage. The untouched 15 Wh default is not treated as measured capacity."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于电量变化推算的功率，并可选择用于功率充电预测。自动预测使用系统报告的容量或已核实的 iPhone 17 标称容量，结合实测电芯电压。未经确认的默认 15 Wh 不会被当作实测容量。"
+          }
+        }
+      }
+    },
+    "Automatic capacity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic capacity"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动容量"
+          }
+        }
+      }
+    },
+    "Use entered Wh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use entered Wh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采用填写的 Wh"
+          }
+        }
+      }
+    },
+    "Current-power reference is calibrated by measured cell energy in comparable local charge-level segments." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current-power reference is calibrated by measured cell energy in comparable local charge-level segments."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前功率参考由本地可比电量区间的实测电芯能量校准。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

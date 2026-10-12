@@ -13,6 +13,8 @@ final class ChargingInteractionTests: XCTestCase {
         let stepper = app.steppers["prediction.target"]
         XCTAssertTrue(stepper.waitForExistence(timeout: 15))
         if !stepper.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(app.staticTexts["prediction.power.heading"].exists)
+        XCTAssertTrue(app.staticTexts["prediction.trend.heading"].exists)
 
         func expectTarget(_ target: Int) {
             let predicate = NSPredicate(format: "value == %@", "\(target)%")
